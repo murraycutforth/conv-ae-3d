@@ -1,0 +1,8 @@
+numpy
+torch
+scipy
+scikit-image
+pandas
+accelerate
+matplotlib
+tqdm
