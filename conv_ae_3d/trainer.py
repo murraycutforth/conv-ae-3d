@@ -175,7 +175,7 @@ class MyAETrainer():
 
                 epoch_loss = []
 
-                for data in tqdm(self.dl, disable=not accelerator.is_main_process):
+                for data in self.dl:
                     data = data.to(device)
 
                     with self.accelerator.autocast():
@@ -186,7 +186,7 @@ class MyAETrainer():
 
                     self.accelerator.backward(loss)
 
-                    pbar.set_description(f'loss: {loss.item():.4f}')
+                    pbar.set_description(f'Current batch loss: {loss.item():.4f}')
 
                     accelerator.wait_for_everyone()
 
