@@ -2,8 +2,8 @@ import unittest
 import logging
 import torch
 import os
-from src.trainer import MyAETrainer
-from src.models.baseline_model import ConvAutoencoderBaseline
+from conv_ae_3d.trainer import MyAETrainer
+from conv_ae_3d.models.baseline_model import ConvAutoencoderBaseline
 
 
 logging.basicConfig(level=logging.INFO)

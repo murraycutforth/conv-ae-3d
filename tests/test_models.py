@@ -1,7 +1,7 @@
 import unittest
 import torch
 import torch.nn as nn
-from src.models.baseline_model import ConvBlockDown, ConvBlockUp, ConvAutoencoderBaseline
+from conv_ae_3d.models.baseline_model import ConvBlockDown, ConvBlockUp, ConvAutoencoderBaseline
 
 
 class TestConvBlockDown(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from src.metrics import hausdorff_distance, compute_mae, compute_mse, linf_error, ssim_error, dice_coefficient
+from conv_ae_3d.metrics import hausdorff_distance, compute_mae, compute_mse, linf_error, ssim_error, dice_coefficient
 
 
 class TestComputeMAE(unittest.TestCase):

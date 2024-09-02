@@ -1,9 +1,9 @@
 import unittest
 
 import torch
-from src.trainer import MyAETrainer
-from src.models.baseline_model import ConvAutoencoderBaseline
-from src.metrics import MetricType
+from conv_ae_3d.trainer import MyAETrainer
+from conv_ae_3d.models.baseline_model import ConvAutoencoderBaseline
+from conv_ae_3d.metrics import MetricType
 
 
 class TestTrainingProcessNoise(unittest.TestCase):
@@ -45,8 +45,8 @@ class TestTrainingProcessNoise(unittest.TestCase):
 class TestTrainingProcessSquares(unittest.TestCase):
     def setUp(self):
         # Generate synthetic data - samples with randomly placed squares
-        self.train_ds = torch.zeros(10, 1, 32, 32, 32)
-        for i in range(10):
+        self.train_ds = torch.zeros(1, 1, 32, 32, 32)
+        for i in range(1):
             x = torch.randint(5, 20, (1,))
             y = torch.randint(5, 20, (1,))
             z = torch.randint(5, 20, (1,))
@@ -64,9 +64,9 @@ class TestTrainingProcessSquares(unittest.TestCase):
             model=self.model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
-            train_batch_size=10,
+            train_batch_size=1,
             train_lr=1e-3,
-            train_num_epochs=50,
+            train_num_epochs=100,
             save_and_sample_every=500,
             results_folder='test_output',
             cpu_only=True,

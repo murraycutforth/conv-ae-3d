@@ -14,7 +14,7 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from src.metrics import MetricType, compute_metrics_single_array
+from conv_ae_3d.metrics import MetricType, compute_metrics_single_array
 
 logger = logging.getLogger(__name__)
 
