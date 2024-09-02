@@ -6,8 +6,6 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# TODO: arbitrary number of linear layers
-
 
 class ConvBlockDown(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, padding, activation, norm):

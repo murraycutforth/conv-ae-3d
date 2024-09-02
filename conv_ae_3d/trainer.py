@@ -207,11 +207,11 @@ class MyAETrainer():
 
                 if (self.epoch % self.save_and_sample_every == 0) and self.epoch != self.train_num_epochs:
                     self.evaluate_metrics()
-                    self.plot_intermediate_val_samples()
-                    self.write_loss_history(loss_history)
 
                     if exists(self.results_folder):
                         self.save(self.epoch)
+                        self.plot_intermediate_val_samples()
+                        self.write_loss_history(loss_history)
 
                 pbar.update(1)
 
