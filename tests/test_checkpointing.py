@@ -18,7 +18,6 @@ class TestCheckpointing(unittest.TestCase):
     def test_save_checkpoints(self):
         model = ConvAutoencoderBaseline(
             image_shape=(32, 32, 32),
-            flat_bottleneck=False,
             feat_map_sizes=(16, 32, 64)
         )
 
@@ -51,7 +50,6 @@ class TestCheckpointing(unittest.TestCase):
 
         model = ConvAutoencoderBaseline(
             image_shape=(32, 32, 32),
-            flat_bottleneck=False,
             feat_map_sizes=(16, 32, 32)
         )
 
@@ -73,7 +71,6 @@ class TestCheckpointing(unittest.TestCase):
     def test_uninitialised_model(self):
         model = ConvAutoencoderBaseline(
             image_shape=(32, 32, 32),
-            flat_bottleneck=False,
             feat_map_sizes=(16, 32, 64)
         )
 
@@ -99,7 +96,6 @@ class TestCheckpointing(unittest.TestCase):
     def test_train_and_reload_forward(self):
         model = ConvAutoencoderBaseline(
             image_shape=(32, 32, 32),
-            flat_bottleneck=False,
             feat_map_sizes=(16, 32, 64)
         )
 
@@ -123,7 +119,6 @@ class TestCheckpointing(unittest.TestCase):
 
         model = ConvAutoencoderBaseline(
             image_shape=(32, 32, 32),
-            flat_bottleneck=False,
             feat_map_sizes=(16, 32, 64)
         )
 
@@ -150,7 +145,6 @@ class TestCheckpointing(unittest.TestCase):
 
         model = ConvAutoencoderBaseline(
             image_shape=(32, 32, 32),
-            flat_bottleneck=False,
             feat_map_sizes=(16, 32, 64)
         )
 
@@ -179,7 +173,6 @@ class TestCheckpointing(unittest.TestCase):
 
         model = ConvAutoencoderBaseline(
             image_shape=(32, 32, 32),
-            flat_bottleneck=False,
             feat_map_sizes=(16, 32, 64)
         )
 

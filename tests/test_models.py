@@ -32,7 +32,7 @@ class TestConvBlockUp(unittest.TestCase):
 
 class TestConvAutoencoderBaselineFlat(unittest.TestCase):
     def setUp(self):
-        self.model = ConvAutoencoderBaseline(image_shape=(64, 64, 64), flat_bottleneck=True, latent_dim=100, activation=nn.ReLU(), norm=nn.BatchNorm3d)
+        self.model = ConvAutoencoderBaseline(image_shape=(64, 64, 64), linear_layer_sizes=(1000, 500, 100), activation=nn.ReLU(), norm=nn.BatchNorm3d)
         self.input_tensor = torch.randn(1, 1, 64, 64, 64)
 
     def test_construction(self):
@@ -48,7 +48,7 @@ class TestConvAutoencoderBaselineFlat(unittest.TestCase):
 
 class TestConvAutoencoderBaseline(unittest.TestCase):
     def setUp(self):
-        self.model = ConvAutoencoderBaseline(image_shape=(64, 64, 64), flat_bottleneck=False, activation=nn.ReLU(), norm=nn.BatchNorm3d)
+        self.model = ConvAutoencoderBaseline(image_shape=(64, 64, 64), activation=nn.ReLU(), norm=nn.BatchNorm3d)
         self.input_tensor = torch.randn(1, 1, 64, 64, 64)
 
     def test_construction(self):

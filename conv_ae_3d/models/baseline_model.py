@@ -6,6 +6,8 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+# TODO: arbitrary number of linear layers
+
 
 class ConvBlockDown(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, padding, activation, norm):
@@ -94,20 +96,17 @@ class ConvAutoencoderBaseline(nn.Module):
     """
     def __init__(self,
                  image_shape: tuple,
-                 flat_bottleneck: bool = True,
-                 latent_dim: int = 100,
                  activation: nn.Module = nn.ReLU(),
                  norm: typing.Type[nn.Module] = nn.InstanceNorm3d,
-                 feat_map_sizes: typing.Iterable = (4, 32, 64, 128),
+                 feat_map_sizes: typing.Sequence = (4, 32, 64, 128),
+                 linear_layer_sizes: typing.Optional[typing.Sequence] = None,
                  final_activation: typing.Optional[str] = None,
                  ):
         super().__init__()
-        self.flat_bottleneck = flat_bottleneck
-        self.latent_dim = latent_dim
         self.activation = activation
         self.norm = norm
 
-        self.encoder_outer = nn.Sequential(
+        encoder_outer = nn.Sequential(
             FirstConvBlock(in_channels=1, out_channels=feat_map_sizes[0], kernel_size=3, padding=1, activation=activation, norm=norm),
             *[ConvBlockDown(in_channels, out_channels, kernel_size=3, padding=1, activation=activation, norm=norm) \
               for in_channels, out_channels in zip(feat_map_sizes[:-1], feat_map_sizes[1:])]
@@ -115,35 +114,50 @@ class ConvAutoencoderBaseline(nn.Module):
 
         final_shape = [s // (2 ** (len(feat_map_sizes) - 1)) for s in image_shape]
 
-        if flat_bottleneck:
-            self.bottleneck_encoder = nn.Sequential(
+        if linear_layer_sizes is not None:
+            # Cases:
+            # - single linear layer, no nonlinearity
+            # - multiple linear layers, n-1 nonlinearities
+            linear_encoder = nn.Sequential(
                 nn.Flatten(),
-                nn.Linear(feat_map_sizes[-1] * np.prod(final_shape), latent_dim),
+                nn.Linear(feat_map_sizes[-1] * np.prod(final_shape), linear_layer_sizes[0]),
             )
+
+            for i in range(len(linear_layer_sizes) - 1):
+                in_feats = linear_layer_sizes[i]
+                out_feats = linear_layer_sizes[i + 1]
+                linear_encoder.add_module(f'linear_activation_{i}', self.activation)
+                linear_encoder.add_module(f'linear_layer_{i}', nn.Linear(in_feats, out_feats))
+
             self.encoder = nn.Sequential(
-                self.encoder_outer,
-                self.bottleneck_encoder,
+                encoder_outer,
+                linear_encoder,
             )
         else:
-            self.encoder = self.encoder_outer
+            self.encoder = encoder_outer
 
-        self.decoder_outer = nn.Sequential(
+        decoder_outer = nn.Sequential(
             *[ConvBlockUp(in_channels, out_channels, kernel_size=3, padding=1, output_padding=1, activation=activation, norm=norm) \
               for in_channels, out_channels in zip(feat_map_sizes[:1:-1], feat_map_sizes[-2:0:-1])],
             FinalConvBlock(in_channels=feat_map_sizes[1], out_channels=feat_map_sizes[0], kernel_size=3, padding=1, output_padding=1, activation=activation, norm=norm)
         )
 
-        if flat_bottleneck:
-            self.bottleneck_decoder = nn.Sequential(
-                nn.Linear(latent_dim, feat_map_sizes[-1] * np.prod(final_shape)),
-                nn.Unflatten(1, (feat_map_sizes[-1], *final_shape)),
-            )
+        if linear_layer_sizes is not None:
+            bottleneck_decoder = nn.Sequential()
+
+            for i in range(len(linear_layer_sizes) - 1, 0, -1):
+                bottleneck_decoder.add_module(f'decoder_linear_{i}', nn.Linear(linear_layer_sizes[i], linear_layer_sizes[i-1]))
+                bottleneck_decoder.add_module(f'decoder_act_{i}', self.activation)
+
+            bottleneck_decoder.add_module('final_linear', nn.Linear(linear_layer_sizes[0], feat_map_sizes[-1] * np.prod(final_shape)))
+            bottleneck_decoder.add_module('unflatten', nn.Unflatten(1, (feat_map_sizes[-1], *final_shape)))
+
             self.decoder = nn.Sequential(
-                self.bottleneck_decoder,
-                self.decoder_outer,
+                bottleneck_decoder,
+                decoder_outer,
             )
         else:
-            self.decoder = self.decoder_outer
+            self.decoder = decoder_outer
 
         if final_activation is None:
             self.decoder.add_module('final_activation', nn.Identity())
@@ -155,7 +169,8 @@ class ConvAutoencoderBaseline(nn.Module):
         num_params = sum(p.numel() for p in self.parameters())
         logger.info(f'Constructed ConvAutoencoderBaseline with {num_params} parameters')
         logger.debug(f'Model architecture: \n{self}')
-        bottleneck_size = latent_dim if flat_bottleneck else np.prod(final_shape) * feat_map_sizes[-1]
+        flat_bottleneck = linear_layer_sizes is not None
+        bottleneck_size = linear_layer_sizes[-1] if flat_bottleneck else np.prod(final_shape) * feat_map_sizes[-1]
         logger.info(f'Input size: {np.prod(image_shape)}, bottleneck size: {bottleneck_size}, compression ratio: {np.prod(image_shape) / bottleneck_size}')
 
     def forward(self, x):
