@@ -4,7 +4,7 @@ with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
 setup(
-    name='conv-ae-3d',
+    name='convae3d',
     version='0.1.0',
     author='Murray Cutforth',
     author_email='mcc4@stanford.edu',
