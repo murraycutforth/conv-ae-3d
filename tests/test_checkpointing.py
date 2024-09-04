@@ -66,6 +66,7 @@ class TestCheckpointing(unittest.TestCase):
                 cpu_only=True,
                 num_dl_workers=0,
                 restart_from_milestone=10,
+                restart_dir='test_output'
             )
 
     def test_uninitialised_model(self):
@@ -134,6 +135,7 @@ class TestCheckpointing(unittest.TestCase):
             cpu_only=True,
             num_dl_workers=0,
             restart_from_milestone=3,
+            restart_dir='test_output'
         )
 
         reloaded_output = reloaded_trainer.model(next(iter(reloaded_trainer.dl_val)))
@@ -160,6 +162,7 @@ class TestCheckpointing(unittest.TestCase):
             cpu_only=True,
             num_dl_workers=0,
             restart_from_milestone=10,
+            restart_dir='test_output'
         )
 
         trainer.evaluate_metrics()
@@ -188,6 +191,7 @@ class TestCheckpointing(unittest.TestCase):
             cpu_only=True,
             num_dl_workers=0,
             restart_from_milestone=10,
+            restart_dir='test_output'
         )
 
         trainer.train()

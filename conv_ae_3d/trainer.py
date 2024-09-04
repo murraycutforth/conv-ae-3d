@@ -43,6 +43,7 @@ class MyAETrainer():
             lr_scheduler = None,
             lr_scheduler_kwargs = None,
             restart_from_milestone: typing.Optional[int] = None,
+            restart_dir: typing.Optional[str] = None,
             metric_types: typing.List[MetricType] = (MetricType.MSE, MetricType.MAE, MetricType.LINF)
     ):
         super().__init__()
@@ -57,11 +58,36 @@ class MyAETrainer():
         self.save_and_sample_every = save_and_sample_every
         self.batch_size = train_batch_size
         self.train_num_epochs = train_num_epochs
-        self.epoch = 0
         self.dataset_val = dataset_val
         self.loss = loss
         self.metric_types = metric_types
-        self.restart_from_milestone = restart_from_milestone
+
+        # Output dir
+        if results_folder is None:
+            logger.info(f'No results folder specified, skipping most output')
+            self.results_folder = None
+        else:
+            self.results_folder = Path(results_folder)
+            self.results_folder.mkdir(exist_ok = True)
+
+        # Optimizer and LR scheduler
+        self.opt = Adam(model.parameters(), lr=train_lr, betas=adam_betas, weight_decay=l2_reg)
+        if lr_scheduler is not None:
+            self.lr_scheduler = lr_scheduler(self.opt, **lr_scheduler_kwargs)
+        else:
+            self.lr_scheduler = None
+
+        # Load from checkpoint
+        if restart_from_milestone is not None:
+            assert exists(restart_dir), "Restart directory must exist"
+            self.load(restart_from_milestone, restart_dir)
+            self.train_num_epochs += self.epoch
+            logger.info(f'Restarting training from milestone {restart_from_milestone}')
+            logger.info(f'Current epoch: {self.epoch}')
+            logger.info(f'New total number of epochs: {self.train_num_epochs}')
+            logger.info(f'Current learning rate: {self.opt.param_groups[0]["lr"]}')
+        else:
+            self.epoch = 0
 
         # dataset and dataloader
         dl = DataLoader(dataset_train, batch_size=train_batch_size, shuffle=True, pin_memory=False, num_workers=num_dl_workers)
@@ -77,30 +103,8 @@ class MyAETrainer():
         first_batch = next(iter(dl))
         assert len(first_batch.shape) == 5, 'Expected 4D tensor for 3D convolutional model'
 
-        self.opt = Adam(model.parameters(), lr=train_lr, betas=adam_betas, weight_decay=l2_reg)
-        if lr_scheduler is not None:
-            self.lr_scheduler = lr_scheduler(self.opt, **lr_scheduler_kwargs)
-        else:
-            self.lr_scheduler = None
-
         self.mean_val_metric_history = []
         self.mean_train_metric_history = []
-
-        if results_folder is None:
-            logger.info(f'No results folder specified, skipping most output')
-            self.results_folder = None
-        else:
-            self.results_folder = Path(results_folder)
-            self.results_folder.mkdir(exist_ok = True)
-
-        if self.restart_from_milestone is not None:
-            assert exists(self.results_folder)
-            self.load(self.restart_from_milestone)
-            self.train_num_epochs += self.epoch
-            logger.info(f'Restarting training from milestone {self.restart_from_milestone}')
-            logger.info(f'Current epoch: {self.epoch}')
-            logger.info(f'New total number of epochs: {self.train_num_epochs}')
-            logger.info(f'Current learning rate: {self.opt.param_groups[0]["lr"]}')
 
         self.dl, self.dl_val, self.model, self.opt = self.accelerator.prepare(dl, dl_val, model, self.opt)
         if exists(self.lr_scheduler):
@@ -115,33 +119,33 @@ class MyAETrainer():
     def save(self, milestone):
         assert exists(self.results_folder), "Results folder does not exist"
 
-        if not self.accelerator.is_local_main_process:
-            return
+        self.accelerator.wait_for_everyone()
+        unwrapped_model = self.accelerator.unwrap_model(self.model)
 
         data = {
             'epoch': self.epoch,
-            'model': self.accelerator.get_state_dict(self.model),
+            'model': self.accelerator.get_state_dict(unwrapped_model),
             'opt': self.opt.state_dict(),
             'lr_scheduler': self.lr_scheduler.state_dict() if exists(self.lr_scheduler) else None,
             'scaler': self.accelerator.scaler.state_dict() if exists(self.accelerator.scaler) else None,
         }
 
-        torch.save(data, str(self.results_folder / f'model-{milestone}.pt'))
-        logger.info(f'Saving model at epoch {self.epoch}')
+        self.accelerator.save(data, str(self.results_folder / f'model-{milestone}.pt'))
 
-    def load(self, milestone: int) -> None:
+        if self.accelerator.is_main_process:
+            logger.info(f'Saving model at epoch {self.epoch}')
+
+    def load(self, milestone: int, restart_dir: str) -> None:
         """Load model checkpoint from disk
         """
-        assert exists(self.results_folder), "Results folder does not exist"
-        assert (self.results_folder / f'model-{milestone}.pt').exists(), f"Model checkpoint {milestone} does not exist"
+        restart_dir = Path(restart_dir)
+        assert (restart_dir / f'model-{milestone}.pt').exists(), f"Model checkpoint {milestone} does not exist"
         assert isinstance(self.model, nn.Module), "Model must be an instance of nn.Module (make sure it has not been modified through accelerator.prepare())"
 
-        data = torch.load(str(self.results_folder / f'model-{milestone}.pt'),
-                          map_location=self.accelerator.device,
-                          weights_only=False)
+        data = torch.load(str(restart_dir / f'model-{milestone}.pt'),
+                          map_location=self.accelerator.device,)
 
         self.model.load_state_dict(data['model'])
-
         self.epoch = data['epoch']
         self.opt.load_state_dict(data['opt'])
 
@@ -186,8 +190,6 @@ class MyAETrainer():
 
                     self.accelerator.backward(loss)
 
-                    pbar.set_description(f'Current batch loss: {loss.item():.4f}')
-
                     accelerator.wait_for_everyone()
 
                     self.opt.step()
@@ -201,6 +203,7 @@ class MyAETrainer():
 
                 epoch_loss = np.mean(epoch_loss)
                 loss_history.append(epoch_loss)
+                pbar.set_description(f'Avg. epoch loss: {epoch_loss:.4f}')
 
                 if accelerator.is_main_process:
                     logger.info(str(pbar))
