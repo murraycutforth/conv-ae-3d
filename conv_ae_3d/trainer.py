@@ -266,19 +266,21 @@ class MyAETrainer():
         df_val = self._evaluate_metrics_inner(self.dl_val, max_n_batches=len(self.dl_val))
         df_train = self._evaluate_metrics_inner(self.dl, max_n_batches=len(self.dl_val))
 
-        self.mean_val_metric_history.append((self.epoch, df_val.mean()))
-        self.mean_train_metric_history.append((self.epoch, df_train.mean()))
+        if self.accelerator.is_main_process:
 
-        logger.info(f'Mean validation metrics at epoch {self.epoch}: \n{df_val.mean()}')
+            self.mean_val_metric_history.append((self.epoch, df_val.mean()))
+            self.mean_train_metric_history.append((self.epoch, df_train.mean()))
 
-        if self.accelerator.is_main_process and exists(self.results_folder):
-            metric_outdir = self.results_folder / 'metrics'
-            metric_outdir.mkdir(exist_ok=True)
+            logger.info(f'Mean validation metrics at epoch {self.epoch}: \n{df_val.mean()}')
 
-            df_val.to_csv(metric_outdir / f'val_metrics_{self.epoch}.csv')
-            df_train.to_csv(metric_outdir / f'train_metrics_{self.epoch}.csv')
+            if exists(self.results_folder):
+                metric_outdir = self.results_folder / 'metrics'
+                metric_outdir.mkdir(exist_ok=True)
 
-            logger.info(f'Written metrics to {metric_outdir / f"val_metrics_{self.epoch}.csv"} and {metric_outdir / f"train_metrics_{self.epoch}.csv"}')
+                df_val.to_csv(metric_outdir / f'val_metrics_{self.epoch}.csv')
+                df_train.to_csv(metric_outdir / f'train_metrics_{self.epoch}.csv')
+
+                logger.info(f'Written metrics to {metric_outdir / f"val_metrics_{self.epoch}.csv"} and {metric_outdir / f"train_metrics_{self.epoch}.csv"}')
 
         self.accelerator.wait_for_everyone()
 
