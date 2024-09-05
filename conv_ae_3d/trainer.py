@@ -219,11 +219,11 @@ class MyAETrainer():
                 pbar.update(1)
 
         if exists(self.results_folder):
+            self.save(self.epoch)
             self.write_loss_history(loss_history)
             self.plot_metric_history()
             self.write_all_val_set_predictions()
             self.plot_final_val_samples()
-            self.save(self.epoch)
 
         self.evaluate_metrics()
         logger.info(f'[Accelerate device {self.accelerator.device}] Training complete!')
