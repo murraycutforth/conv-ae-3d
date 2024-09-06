@@ -128,7 +128,7 @@ class TestCheckpointing(unittest.TestCase):
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
             train_batch_size=2,
-            train_lr=1e-3,
+            train_lr=1e-4,
             train_num_epochs=3,  # Train for a few more epochs
             save_and_sample_every=3,
             results_folder='test_output',
