@@ -79,7 +79,7 @@ class MyAETrainer():
 
         # Load from checkpoint
         if restart_from_milestone is not None:
-            assert exists(restart_dir), "Restart directory must exist"
+            assert exists(restart_dir), f"Restart directory at {restart_dir} must exist"
             self.load(restart_from_milestone, restart_dir)
             self.train_num_epochs += self.epoch
             logger.info(f'Restarting training from milestone {restart_from_milestone}')
@@ -139,10 +139,11 @@ class MyAETrainer():
         """Load model checkpoint from disk
         """
         restart_dir = Path(restart_dir)
-        assert (restart_dir / f'model-{milestone}.pt').exists(), f"Model checkpoint {milestone} does not exist"
+        restart_path = restart_dir / f'model-{milestone}.pt'
+        assert restart_path.exists(), f"Model checkpoint at {restart_path} does not exist"
         assert isinstance(self.model, nn.Module), "Model must be an instance of nn.Module (make sure it has not been modified through accelerator.prepare())"
 
-        data = torch.load(str(restart_dir / f'model-{milestone}.pt'),
+        data = torch.load(str(restart_path),
                           map_location=self.accelerator.device,)
 
         self.model.load_state_dict(data['model'])
