@@ -85,7 +85,9 @@ class MyAETrainer():
             logger.info(f'Restarting training from milestone {restart_from_milestone}')
             logger.info(f'Current epoch: {self.epoch}')
             logger.info(f'New total number of epochs: {self.train_num_epochs}')
-            logger.info(f'Current learning rate: {self.opt.param_groups[0]["lr"]}')
+            logger.info(f'Prev learning rate: {self.opt.param_groups[0]["lr"]}')
+            self.reset_learning_rate(train_lr)
+            logger.info(f'New learning rate: {self.opt.param_groups[0]["lr"]}')
         else:
             self.epoch = 0
 
@@ -115,6 +117,12 @@ class MyAETrainer():
     @property
     def device(self):
         return self.accelerator.device
+
+    def reset_learning_rate(self, new_lr: float):
+        """Reset the learning rate of the optimizer
+        """
+        for param_group in self.opt.param_groups:
+            param_group['lr'] = new_lr
 
     def save(self, milestone):
         assert exists(self.results_folder), "Results folder does not exist"
