@@ -32,6 +32,7 @@ class MyAETrainer():
             train_lr = 1e-4,
             train_num_epochs = 100,
             save_and_sample_every = 10,
+            low_data_mode: bool = False,
             adam_betas = (0.9, 0.99),
             l2_reg: float = 1e-4,
             results_folder: typing.Optional[str] = './results',
@@ -56,6 +57,7 @@ class MyAETrainer():
 
         self.model = model
         self.save_and_sample_every = save_and_sample_every
+        self.low_data_mode = low_data_mode
         self.batch_size = train_batch_size
         self.train_num_epochs = train_num_epochs
         self.dataset_val = dataset_val
@@ -69,6 +71,9 @@ class MyAETrainer():
         else:
             self.results_folder = Path(results_folder)
             self.results_folder.mkdir(exist_ok = True)
+
+        if self.low_data_mode:
+            self.save_and_sample_every = self.train_num_epochs + 1
 
         # Optimizer and LR scheduler
         self.opt = Adam(model.parameters(), lr=train_lr, betas=adam_betas, weight_decay=l2_reg)
@@ -176,7 +181,8 @@ class MyAETrainer():
         loss_history = []
 
         if exists(self.results_folder):
-            self.plot_intermediate_val_samples()
+            if not self.low_data_mode:
+                self.plot_intermediate_val_samples()
 
         accelerator.wait_for_everyone()
 
@@ -231,8 +237,10 @@ class MyAETrainer():
             self.save(self.epoch)
             self.write_loss_history(loss_history)
             self.plot_metric_history()
-            self.write_all_val_set_predictions()
-            self.plot_final_val_samples()
+
+            if not self.low_data_mode:
+                self.write_all_val_set_predictions()
+                self.plot_final_val_samples()
 
         self.evaluate_metrics()
         logger.info(f'[Accelerate device {self.accelerator.device}] Training complete!')
