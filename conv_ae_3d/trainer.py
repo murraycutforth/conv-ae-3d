@@ -170,6 +170,8 @@ class MyAETrainer():
             self.lr_scheduler.load_state_dict(data['lr_scheduler'])
 
     def train(self):
+        """Run full training loop
+        """
         accelerator = self.accelerator
         device = accelerator.device
 
@@ -244,6 +246,25 @@ class MyAETrainer():
 
         self.evaluate_metrics()
         logger.info(f'[Accelerate device {self.accelerator.device}] Training complete!')
+
+    def eval(self):
+        """Run evaluation loop only of pretrained model
+        """
+        assert exists(self.results_folder), "Results folder does not exist"
+        accelerator = self.accelerator
+        device = accelerator.device
+
+        if accelerator.is_main_process:
+            logger.info(f'Accelerate parallelism strategy: {accelerator.state.distributed_type}')
+
+        logger.info(f'[Accelerate device {device}] evaluation started')
+
+        self.write_all_val_set_predictions()
+        self.plot_final_val_samples()
+        self.evaluate_metrics()
+
+        logger.info(f'[Accelerate device {device}] evaluation complete!')
+
 
     def write_loss_history(self, loss_history):
         """Write the loss history to file as a json file and a png plot
