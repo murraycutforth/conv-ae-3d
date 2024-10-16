@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def construct_and_load_pretrained_baseline_model(restart_dir: str,
-                                                 milestone: int|str,
+                                                 milestone,
                                                  image_shape,
                                                  activation,
                                                  norm,
