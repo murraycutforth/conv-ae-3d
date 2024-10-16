@@ -40,6 +40,8 @@ class MyAETrainer():
             mixed_precision_type = 'fp16',
             cpu_only = False,
             num_dl_workers = 0,
+            denoising: bool = False,
+            noise_std: float = 0,
             loss: nn.Module = nn.MSELoss(),
             lr_scheduler = None,
             lr_scheduler_kwargs = None,
@@ -63,6 +65,8 @@ class MyAETrainer():
         self.dataset_val = dataset_val
         self.loss = loss
         self.metric_types = metric_types
+        self.denoising = denoising
+        self.noise_std = noise_std
 
         # Output dir
         if results_folder is None:
@@ -143,9 +147,8 @@ class MyAETrainer():
             'scaler': self.accelerator.scaler.state_dict() if exists(self.accelerator.scaler) else None,
         }
 
-        self.accelerator.save(data, str(self.results_folder / f'model-{milestone}.pt'))
-
         if self.accelerator.is_main_process:
+            self.accelerator.save(data, str(self.results_folder / f'model-{milestone}.pt'))
             logger.info(f'Saving model at epoch {self.epoch}')
 
     def load(self, milestone: int, restart_dir: str) -> None:
@@ -197,10 +200,17 @@ class MyAETrainer():
                 epoch_loss = []
 
                 for data in self.dl:
+
+                    if self.denoising:
+                        model_input_data = data + torch.randn_like(data) * self.noise_std
+                    else:
+                        model_input_data = data
+
                     data = data.to(device)
+                    model_input_data = model_input_data.to(device)
 
                     with self.accelerator.autocast():
-                        pred = self.model(data)
+                        pred = self.model(model_input_data)
                         loss = self.loss(pred, data)
 
                     epoch_loss.append(float(loss.item()))
