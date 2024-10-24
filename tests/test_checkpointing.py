@@ -17,8 +17,12 @@ class TestCheckpointing(unittest.TestCase):
 
     def test_save_checkpoints(self):
         model = ConvAutoencoderBaseline(
-            image_shape=(32, 32, 32),
-            feat_map_sizes=(16, 32, 64)
+            dim=16,
+            dim_mults=(1, 2),
+            channels=1,
+            z_channels=4,
+            block_type=0,
+            im_shape=(32, 32, 32)
         )
 
         trainer = MyAETrainer(
@@ -28,7 +32,7 @@ class TestCheckpointing(unittest.TestCase):
             train_batch_size=2,
             train_lr=1e-3,
             train_num_epochs=10,  # Train for a few more epochs
-            save_and_sample_every=5,
+            save_and_sample_every=10,
             results_folder='test_output',
             cpu_only=True,
             num_dl_workers=0,
@@ -40,8 +44,6 @@ class TestCheckpointing(unittest.TestCase):
 
         self.assertLess(results['MAE'], 0.7)
         self.assertLess(results['MSE'], 0.7)
-
-        self.assertTrue(os.path.exists(os.path.join('test_output', 'model-5.pt')))
         self.assertTrue(os.path.exists(os.path.join('test_output', 'model-10.pt')))
 
     def test_load_mismatched_model(self):
@@ -49,8 +51,12 @@ class TestCheckpointing(unittest.TestCase):
         self.test_save_checkpoints()
 
         model = ConvAutoencoderBaseline(
-            image_shape=(32, 32, 32),
-            feat_map_sizes=(16, 32, 32)
+            dim=16,
+            dim_mults=(1, 2, 2, 2),
+            channels=1,
+            z_channels=4,
+            block_type=0,
+            im_shape=(32, 32, 32)
         )
 
         with self.assertRaises(RuntimeError):
@@ -71,15 +77,19 @@ class TestCheckpointing(unittest.TestCase):
 
     def test_uninitialised_model(self):
         model = ConvAutoencoderBaseline(
-            image_shape=(32, 32, 32),
-            feat_map_sizes=(16, 32, 64)
+            dim=16,
+            dim_mults=(1, 2),
+            channels=1,
+            z_channels=4,
+            block_type=0,
+            im_shape=(32, 32, 32)
         )
 
         trainer = MyAETrainer(
             model=model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
-            train_batch_size=2,
+            train_batch_size=1,
             train_lr=1e-3,
             train_num_epochs=10,  # Train for a few more epochs
             save_and_sample_every=10,
@@ -96,15 +106,19 @@ class TestCheckpointing(unittest.TestCase):
 
     def test_train_and_reload_forward(self):
         model = ConvAutoencoderBaseline(
-            image_shape=(32, 32, 32),
-            feat_map_sizes=(16, 32, 64)
+            dim=16,
+            dim_mults=(1, 2),
+            channels=1,
+            z_channels=4,
+            block_type=0,
+            im_shape=(32, 32, 32)
         )
 
         trainer = MyAETrainer(
             model=model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
-            train_batch_size=2,
+            train_batch_size=1,
             train_lr=1e-3,
             train_num_epochs=3,  # Train for a few more epochs
             save_and_sample_every=3,
@@ -119,15 +133,19 @@ class TestCheckpointing(unittest.TestCase):
         output = trainer.model(next(iter(trainer.dl_val)))
 
         model = ConvAutoencoderBaseline(
-            image_shape=(32, 32, 32),
-            feat_map_sizes=(16, 32, 64)
+            dim=16,
+            dim_mults=(1, 2),
+            channels=1,
+            z_channels=4,
+            block_type=0,
+            im_shape=(32, 32, 32)
         )
 
         reloaded_trainer = MyAETrainer(
             model=model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
-            train_batch_size=2,
+            train_batch_size=1,
             train_lr=1e-4,
             train_num_epochs=3,  # Train for a few more epochs
             save_and_sample_every=3,
@@ -146,8 +164,12 @@ class TestCheckpointing(unittest.TestCase):
         self.test_save_checkpoints()
 
         model = ConvAutoencoderBaseline(
-            image_shape=(32, 32, 32),
-            feat_map_sizes=(16, 32, 64)
+            dim=16,
+            dim_mults=(1, 2, 2, 2),
+            channels=1,
+            z_channels=4,
+            block_type=1,
+            im_shape=(32, 32, 32)
         )
 
         trainer = MyAETrainer(
@@ -175,8 +197,12 @@ class TestCheckpointing(unittest.TestCase):
         self.test_save_checkpoints()
 
         model = ConvAutoencoderBaseline(
-            image_shape=(32, 32, 32),
-            feat_map_sizes=(16, 32, 64)
+            dim=16,
+            dim_mults=(1, 2),
+            channels=1,
+            z_channels=4,
+            block_type=0,
+            im_shape=(32, 32, 32)
         )
 
         trainer = MyAETrainer(

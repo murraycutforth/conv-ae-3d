@@ -43,6 +43,8 @@ class MyAETrainer():
             denoising: bool = False,
             noise_std: float = 0,
             loss: nn.Module = nn.MSELoss(),
+            kl_weight: float = None,
+            sample_posterior: bool = False,
             lr_scheduler = None,
             lr_scheduler_kwargs = None,
             restart_from_milestone: typing.Optional[int] = None,
@@ -67,6 +69,8 @@ class MyAETrainer():
         self.metric_types = metric_types
         self.denoising = denoising
         self.noise_std = noise_std
+        self.kl_weight = kl_weight
+        self.sample_posterior = sample_posterior
 
         # Output dir
         if results_folder is None:
@@ -206,10 +210,12 @@ class MyAETrainer():
                     else:
                         model_input_data = data
 
-                    data = data.to(device)
-                    model_input_data = model_input_data.to(device)
-
-                    with self.accelerator.autocast():
+                    if self.kl_weight is not None:
+                        pred, posterior = self.model(model_input_data, return_posterior=True, sample_posterior=self.sample_posterior)
+                        rec_loss = self.loss(pred, data)
+                        kl_loss = posterior.kl().mean()
+                        loss = rec_loss + self.kl_weight * kl_loss
+                    else:
                         pred = self.model(model_input_data)
                         loss = self.loss(pred, data)
 
@@ -239,7 +245,7 @@ class MyAETrainer():
                     self.evaluate_metrics()
 
                     if exists(self.results_folder):
-                        self.save(self.epoch)
+                        #self.save(self.epoch)
                         self.plot_intermediate_val_samples()
                         self.write_loss_history(loss_history)
 
@@ -449,17 +455,20 @@ def write_slice_plot(outpath: Path, data: np.ndarray, pred: np.ndarray):
 
     fig, axs = plt.subplots(2, 3, figsize=(12, 8), dpi=200)
 
+    data_min, data_max = data.min(), data.max()
+    pred_min, pred_max = pred.min(), pred.max()
+
     for j in range(3):
         ax = axs[0, j]
         ax.set_title(f'Original ({j}-slice)')
         image = np.take(data, indices=data.shape[j] // 2, axis=j)
-        im = ax.imshow(image, cmap="gray")
+        im = ax.imshow(image, cmap="gray", vmin=data_min, vmax=data_max)
         fig.colorbar(im, ax=ax)
 
         ax = axs[1, j]
         ax.set_title(f'Reconstructed ({j}-slice)')
         image = np.take(pred, indices=pred.shape[j] // 2, axis=j)
-        im = ax.imshow(image, cmap="gray")
+        im = ax.imshow(image, cmap="gray", vmin=pred_min, vmax=pred_max)
         fig.colorbar(im, ax=ax)
 
     fig.tight_layout()

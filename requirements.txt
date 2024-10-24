@@ -6,3 +6,4 @@ pandas
 accelerate
 matplotlib
 tqdm
+einops
