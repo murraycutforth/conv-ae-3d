@@ -72,6 +72,8 @@ class MyAETrainer():
         self.kl_weight = kl_weight
         self.sample_posterior = sample_posterior
 
+        assert hasattr(self.dataset_val, 'unnormalise_array'), "Dataset must have an unnormalise_array method for plotting"
+
         # Output dir
         if results_folder is None:
             logger.info(f'No results folder specified, skipping most output')
@@ -245,7 +247,7 @@ class MyAETrainer():
                     self.evaluate_metrics()
 
                     if exists(self.results_folder):
-                        #self.save(self.epoch)
+                        self.save(self.epoch)
                         self.plot_intermediate_val_samples()
                         self.write_loss_history(loss_history)
 
@@ -254,13 +256,14 @@ class MyAETrainer():
         if exists(self.results_folder):
             self.save(self.epoch)
             self.write_loss_history(loss_history)
-            self.plot_metric_history()
 
             if not self.low_data_mode:
                 self.write_all_val_set_predictions()
                 self.plot_final_val_samples()
 
         self.evaluate_metrics()
+        if exists(self.results_folder):
+            self.plot_metric_history()
         logger.info(f'[Accelerate device {self.accelerator.device}] Training complete!')
 
     def eval(self):
@@ -435,10 +438,18 @@ class MyAETrainer():
         outdir = self.results_folder / 'final_val_samples'
         outdir.mkdir(exist_ok=True)
 
+        outdir_un = self.results_folder / 'final_val_samples_unnormalised'
+        outdir_un.mkdir(exist_ok=True)
+
         for i, (pred, data) in enumerate(self.run_inference(self.dl_val, max_n_batches=None)):
             if self.accelerator.is_main_process:
                 outpath = outdir / f"final_{i}_slice.png"
                 write_slice_plot(outpath, data, pred)
+
+                data_un = self.dataset_val.unnormalise_array(data)
+                pred_un = self.dataset_val.unnormalise_array(pred)
+                outpath = outdir_un / f"final_{i}_slice.png"
+                write_slice_plot(outpath, data_un, pred_un)
 
         logger.info(f"Saved all final val samples to {outdir}")
 
@@ -457,7 +468,7 @@ def write_slice_plot(outpath: Path, data: np.ndarray, pred: np.ndarray):
 
     data_min, data_max = data.min(), data.max()
     pred_min, pred_max = pred.min(), pred.max()
-
+    
     for j in range(3):
         ax = axs[0, j]
         ax.set_title(f'Original ({j}-slice)')
@@ -476,6 +487,8 @@ def write_slice_plot(outpath: Path, data: np.ndarray, pred: np.ndarray):
     plt.close(fig)
 
     logger.info(f"Saved samples spatial slice plot to {outpath}")
+
+
 
     ## Create isosurface plots
     #isosurface_folder = Path(results_folder) / "isosurface_plots"
