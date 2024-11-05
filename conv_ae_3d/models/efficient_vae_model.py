@@ -2,6 +2,7 @@ import logging
 from functools import partial
 
 import numpy as np
+import torch
 import torch.nn as nn
 
 from conv_ae_3d.models.blocks import Upsample, Downsample, ResnetBlock, BasicBlock
@@ -24,7 +25,11 @@ class Encoder3D(nn.Module):
                  ):
         super().__init__()
         self.channels = channels
-        self.init_conv = nn.Conv3d(channels, dim, 1, padding=0)
+        self.init_conv = nn.Conv3d(channels, dim, 3, padding=1)
+        self.init_conv_2 = nn.Conv3d(channels, dim, 5, stride=2, padding=2)
+        self.init_conv_3 = nn.Conv3d(channels, dim, 7, stride=4, padding=3)
+
+        assert len(dim_mults) <= 4
 
         dims = list(map(lambda m: dim * m, dim_mults))
         in_out = list(zip(dims[:-1], dims[1:]))
@@ -40,22 +45,56 @@ class Encoder3D(nn.Module):
 
         for ind, (dim_in, dim_out) in enumerate(in_out):
             is_last = ind == len(in_out) - 1
+            is_first = ind == 0
 
-            self.downs.append(block_class(dim_in, dim_in))
-            self.downs.append(block_class(dim_in, dim_in))
-            self.downs.append(Downsample(dim_in, dim_out) if not is_last else nn.Conv3d(dim_in, dim_out, 3, padding=1))
+            downs_inner = nn.ModuleList([])
+
+            if is_first:
+                downs_inner.append(block_class(dim_in, dim_in))
+                downs_inner.append(Downsample(dim_in, dim_out))
+            elif is_last:
+                downs_inner.append(block_class(dim_in + dim, dim_in))
+                downs_inner.append(block_class(dim_in, dim_in))
+                downs_inner.append(nn.Conv3d(dim_in, dim_out, 3, padding=1))
+            else:
+                downs_inner.append(block_class(dim_in + dim, dim_in))
+                downs_inner.append(block_class(dim_in, dim_out))
+                downs_inner.append(Downsample(dim_in, dim_out))
+
+            self.downs.append(downs_inner)
 
         mid_dim = dims[-1]
-        self.mid_block_1 = block_class(mid_dim, mid_dim)
+        self.mid_block_1 = block_class(mid_dim + dim, mid_dim)
         self.mid_block_2 = block_class(mid_dim, mid_dim)
         self.final_block = nn.Conv3d(mid_dim, 2 * z_channels, kernel_size=3, stride=1, padding=1)
 
     def forward(self, x):
-        h = self.init_conv(x)
+        h1 = self.init_conv(x)
+        h2 = self.init_conv_2(x)
+        h4 = self.init_conv_3(x)
 
-        for block in self.downs:
-            h = block(h)
+        inits = [h1, h2, h4]
+        h = h1
 
+        for i, downs_inner in enumerate(self.downs):
+            is_last = i == len(self.downs) - 1
+            is_first = i == 0
+
+            if is_last:
+                h_init = inits[-1]
+            else:
+                h_init = inits[i]
+
+            if not is_first:
+                h = torch.concat([h, h_init], dim=1)
+
+            print(i, h.shape)
+
+            for block in downs_inner:
+                print(h.shape)
+                h = block(h)
+
+        h = torch.concat([h, inits[-1]], dim=1)
         h = self.mid_block_1(h)
         h = self.mid_block_2(h)
         h = self.final_block(h)
@@ -93,6 +132,10 @@ class Decoder3D(nn.Module):
         for ind, (dim_in, dim_out) in enumerate(reversed(in_out)):
             is_last = ind == len(in_out) - 1
 
+            ups_inner = nn.ModuleList([])
+            ups_inner.append(block_class(dim_out + dim, dim_out))
+            ups_inner.append(block_class(dim_out, dim_out))
+
             self.ups.append(block_class(dim_out, dim_out))
             self.ups.append(block_class(dim_out, dim_out))
             self.ups.append(Upsample(dim_out, dim_in) if not is_last else nn.Conv3d(dim_out, dim_in, 3, padding=1))
@@ -100,7 +143,7 @@ class Decoder3D(nn.Module):
         out_dim = dims[0]
         self.mid_block_1 = block_class(out_dim, out_dim)
         self.mid_block_2 = block_class(out_dim, out_dim)
-        self.final_block = nn.Conv3d(out_dim, channels, kernel_size=3, stride=1, padding=1)
+        self.final_block = nn.Conv3d(out_dim, channels, kernel_size=1, stride=1, padding=0)
 
     def forward(self, z):
         h = self.init_conv(z)
@@ -114,7 +157,7 @@ class Decoder3D(nn.Module):
         return h
 
 
-class VariationalAutoEncoder3D(nn.Module):
+class EfficientVariationalAutoEncoder3D(nn.Module):
     def __init__(self,
                  dim,
                  dim_mults,
@@ -127,13 +170,13 @@ class VariationalAutoEncoder3D(nn.Module):
         self.decoder = Decoder3D(dim, dim_mults, channels, z_channels, block_type=block_type)
 
         num_params = sum(p.numel() for p in self.parameters())
-        logger.info(f'Constructed VariationAutoEncoder3D with {num_params} parameters')
+        print(f'Constructed VariationAutoEncoder3D with {num_params} parameters')
         logger.debug(f'Model architecture: \n{self}')
 
         if not im_shape is None:
             final_shape = np.array(im_shape) // (2 ** (len(dim_mults) - 2))
             bottleneck_size = np.prod(final_shape) * z_channels
-            logger.info(
+            print(
                 f'Input size: {np.prod(im_shape)}, bottleneck shape: {(z_channels, *final_shape)}, compression ratio: {np.prod(im_shape) / bottleneck_size}')
 
     def encode(self, x):

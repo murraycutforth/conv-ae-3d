@@ -198,6 +198,7 @@ class MyAETrainer():
         accelerator.wait_for_everyone()
 
         self.evaluate_metrics()
+        step = 0
 
         with tqdm(initial = self.epoch, total = self.train_num_epochs, disable=not accelerator.is_main_process) as pbar:
 
@@ -227,6 +228,12 @@ class MyAETrainer():
 
                     accelerator.wait_for_everyone()
 
+                    if step == 0:
+                        if torch.cuda.is_available():
+                            memory_summary = torch.cuda.memory_summary()
+                            logger.info(memory_summary)
+
+                    step += 1
                     self.opt.step()
                     self.opt.zero_grad()
 
