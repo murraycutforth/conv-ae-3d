@@ -59,8 +59,8 @@ class TestVariationalAutoEncoder3D_0(unittest.TestCase):
 class TestVariationalAutoEncoder3D_1(unittest.TestCase):
     def setUp(self):
         self.model = VariationalAutoEncoder3D(
-            dim=16,
-            dim_mults=(1, 2, 4, 8),
+            dim=10,
+            dim_mults=(1, 2, 4, 4, 8),
             channels=1,
             z_channels=1,
             block_type=1,

@@ -20,7 +20,7 @@ class Encoder3D(nn.Module):
                  channels: int,
                  z_channels: int,
                  block_type: int,
-                 resnet_block_groups: int = 4
+                 resnet_block_groups: int = 2
                  ):
         super().__init__()
         self.channels = channels
@@ -71,7 +71,7 @@ class Decoder3D(nn.Module):
                  channels: int,
                  z_channels: int,
                     block_type: int,
-                 resnet_block_groups: int = 4
+                 resnet_block_groups: int = 2
                  ):
         super().__init__()
         self.channels = channels
