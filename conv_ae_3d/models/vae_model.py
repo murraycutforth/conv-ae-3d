@@ -71,7 +71,8 @@ class Decoder3D(nn.Module):
                  channels: int,
                  z_channels: int,
                     block_type: int,
-                 resnet_block_groups: int = 2
+                 resnet_block_groups: int = 2,
+                 final_kernel_size: int = 3
                  ):
         super().__init__()
         self.channels = channels
@@ -99,7 +100,13 @@ class Decoder3D(nn.Module):
 
         out_dim = dims[0]
         self.mid_block_1 = block_class(out_dim, out_dim)
-        self.final_block = nn.Conv3d(out_dim, channels, kernel_size=1, stride=1, padding=0)
+        self.mid_block_2 = block_class(out_dim, out_dim)
+        if final_kernel_size == 3:
+            self.final_block = nn.Conv3d(out_dim, channels, kernel_size=3, stride=1, padding=1)
+        elif final_kernel_size == 1:
+            self.final_block = nn.Conv3d(out_dim, channels, kernel_size=1, stride=1, padding=0)
+        else:
+            raise ValueError(f"Invalid final kernel size: {final_kernel_size}")
 
     def forward(self, z):
         h = self.init_conv(z)
@@ -108,6 +115,7 @@ class Decoder3D(nn.Module):
             h = block(h)
 
         h = self.mid_block_1(h)
+        h = self.mid_block_2(h)
         h = self.final_block(h)
         return h
 
@@ -120,10 +128,11 @@ class VariationalAutoEncoder3D(nn.Module):
                  z_channels,
                  block_type,
                  group_norm_size: int = 4,
+                 final_kernel_size: int = 3,
                  im_shape = None):
         super().__init__()
         self.encoder = Encoder3D(dim, dim_mults, channels, z_channels, block_type=block_type, resnet_block_groups=group_norm_size)
-        self.decoder = Decoder3D(dim, dim_mults, channels, z_channels, block_type=block_type, resnet_block_groups=group_norm_size)
+        self.decoder = Decoder3D(dim, dim_mults, channels, z_channels, block_type=block_type, resnet_block_groups=group_norm_size, final_kernel_size=final_kernel_size)
 
         num_params = sum(p.numel() for p in self.parameters())
         logger.info(f'Constructed VariationAutoEncoder3D with {num_params} parameters')

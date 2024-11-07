@@ -4,16 +4,31 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.utils.data import Dataset
 from conv_ae_3d.trainer import MyAETrainer
 from conv_ae_3d.models.baseline_model import ConvAutoencoderBaseline
 from conv_ae_3d.models.vae_model import VariationalAutoEncoder3D
 from conv_ae_3d.metrics import MetricType
 
 
+class TestDataset(Dataset):
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+
+    def unnormalise_array(self, array):
+        return array
+
+
 class TestTrainingNoiseVAE_0(unittest.TestCase):
     def setUp(self):
         # Generate synthetic data, just noise
-        self.train_ds = torch.randn(1, 1, 32, 32, 32)
+        self.train_ds = TestDataset(torch.randn(1, 1, 32, 32, 32))
 
         self.model = VariationalAutoEncoder3D(
             dim=16,
@@ -21,7 +36,8 @@ class TestTrainingNoiseVAE_0(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=0,
-            im_shape=(32, 32, 32)
+            im_shape=(32, 32, 32),
+            final_kernel_size=1,
         )
 
         self.trainer = MyAETrainer(
@@ -40,7 +56,7 @@ class TestTrainingNoiseVAE_0(unittest.TestCase):
         )
 
     def test_z_shape(self):
-        posterior = self.model.encode(self.train_ds)
+        posterior = self.model.encode(self.train_ds.data)
         z = posterior.mode()
         self.assertEqual(z.shape, (1, 4, 8, 8, 8))
 
