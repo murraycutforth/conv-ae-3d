@@ -121,10 +121,11 @@ class VariationalAutoEncoder3D(nn.Module):
                  channels,
                  z_channels,
                  block_type,
+                 group_norm_size: int = 4,
                  im_shape = None):
         super().__init__()
-        self.encoder = Encoder3D(dim, dim_mults, channels, z_channels, block_type=block_type)
-        self.decoder = Decoder3D(dim, dim_mults, channels, z_channels, block_type=block_type)
+        self.encoder = Encoder3D(dim, dim_mults, channels, z_channels, block_type=block_type, resnet_block_groups=group_norm_size)
+        self.decoder = Decoder3D(dim, dim_mults, channels, z_channels, block_type=block_type, resnet_block_groups=group_norm_size)
 
         num_params = sum(p.numel() for p in self.parameters())
         logger.info(f'Constructed VariationAutoEncoder3D with {num_params} parameters')
