@@ -97,8 +97,7 @@ class Decoder(nn.Module):
 
         out_dim = dims[0]
         self.mid_block_1 = block_class(out_dim, out_dim)
-        self.mid_block_2 = block_class(out_dim, out_dim)
-        self.final_block = nn.Conv3d(out_dim, channels, kernel_size=3, stride=1, padding=1)
+        self.final_block = nn.Conv3d(out_dim, channels, kernel_size=1, stride=1, padding=0)
 
     def forward(self, z):
         h = self.init_conv(z)
@@ -107,7 +106,6 @@ class Decoder(nn.Module):
             h = block(h)
 
         h = self.mid_block_1(h)
-        h = self.mid_block_2(h)
         h = self.final_block(h)
         return h
 

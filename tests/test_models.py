@@ -29,7 +29,7 @@ class TestVariationalAutoEncoder3D_0(unittest.TestCase):
     def setUp(self):
         self.model = VariationalAutoEncoder3D(
             dim=16,
-            dim_mults=(1, 2, 4, 8),
+            dim_mults=(1, 2, 4, 4, 8),
             channels=1,
             z_channels=1,
             block_type=0,
@@ -59,7 +59,7 @@ class TestVariationalAutoEncoder3D_0(unittest.TestCase):
 class TestVariationalAutoEncoder3D_1(unittest.TestCase):
     def setUp(self):
         self.model = VariationalAutoEncoder3D(
-            dim=10,
+            dim=8,
             dim_mults=(1, 2, 4, 4, 8),
             channels=1,
             z_channels=1,
@@ -106,7 +106,7 @@ class TestEfficientVariationalAutoEncoder(unittest.TestCase):
         self.assertEqual(posterior.logvar.shape, (1, 1, 8, 8, 8))  # Check the shape of the logvar
 
     def test_decode(self):
-        z = torch.randn(1, 1, 4, 4, 4)  # Latent variable with the expected shape
+        z = torch.randn(1, 1, 8, 8, 8)  # Latent variable with the expected shape
         decoded = self.model.decode(z)
         self.assertEqual(decoded.shape, (1, 1, 32, 32, 32))  # Check the shape of the decoded output
 
@@ -114,7 +114,7 @@ class TestEfficientVariationalAutoEncoder(unittest.TestCase):
         reconstructed = self.model(self.input_data)
         posterior = self.model.encode(self.input_data)
         self.assertEqual(reconstructed.shape, (1, 1, 32, 32, 32))  # Check the shape of the reconstructed output
-        self.assertEqual(posterior.mean.shape, (1, 1, 4, 4, 4))  # Check the shape of the posterior mean
+        self.assertEqual(posterior.mean.shape, (1, 1, 8, 8, 8))  # Check the shape of the posterior mean
 
 
 if __name__ == '__main__':
