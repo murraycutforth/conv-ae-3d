@@ -123,6 +123,11 @@ class MyAETrainer():
         first_batch_posterior = self.model.encode(first_batch)
         z = first_batch_posterior.mode()
         self.latent_num_pixels = z.shape[1] * z.shape[2] * z.shape[3] * z.shape[4]
+        physical_num_pixels = first_batch.shape[1] * first_batch.shape[2] * first_batch.shape[3] * first_batch.shape[4]
+
+        logger.info(f'Latent space size: {self.latent_num_pixels}')
+        logger.info(f'Physical space size: {physical_num_pixels}')
+        logger.info(f'Compression ratio: {physical_num_pixels / self.latent_num_pixels}')
 
         self.mean_val_metric_history = []
         self.mean_train_metric_history = []
@@ -230,7 +235,7 @@ class MyAETrainer():
                         pred = self.model(model_input_data)
                         loss = self.loss(pred, data)
 
-                    epoch_loss.append({'total': loss.item(), 'rec': rec_loss.item(), 'kl': kl_loss.item()})
+                    epoch_loss.append({'Total': loss.item(), 'Rec': rec_loss.item(), 'KL': kl_loss.item()})
 
                     self.accelerator.backward(loss)
 
