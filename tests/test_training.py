@@ -75,7 +75,7 @@ class TestTrainingNoiseVAE_0(unittest.TestCase):
 class TestTrainingNoiseVAE_1(unittest.TestCase):
     def setUp(self):
         # Generate synthetic data, just noise
-        self.train_ds = torch.randn(1, 1, 32, 32, 32)
+        self.train_ds = TestDataset(torch.randn(1, 1, 32, 32, 32))
 
         self.model = VariationalAutoEncoder3D(
             dim=16,
@@ -121,6 +121,7 @@ class TestTrainingNoiseAEBaseline_0(unittest.TestCase):
     def setUp(self):
         # Generate synthetic data, just noise
         self.train_ds = torch.randn(1, 1, 32, 32, 32)
+        self.train_ds = TestDataset(torch.randn(1, 1, 32, 32, 32))
 
         #self.model = ConvAutoencoderBaseline(
         #    image_shape=(32, 32, 32),
@@ -164,6 +165,7 @@ class TestTrainingNoiseAEBaseline_1(unittest.TestCase):
     def setUp(self):
         # Generate synthetic data, just noise
         self.train_ds = torch.randn(1, 1, 32, 32, 32)
+        self.train_ds = TestDataset(torch.randn(1, 1, 32, 32, 32))
 
         #self.model = ConvAutoencoderBaseline(
         #    image_shape=(32, 32, 32),
@@ -206,12 +208,13 @@ class TestTrainingNoiseAEBaseline_1(unittest.TestCase):
 class TestTrainingSquares(unittest.TestCase):
     def setUp(self):
         self.b = 8
-        self.train_ds = torch.zeros(self.b, 1, 16, 16, 16)
+        data = torch.zeros(self.b, 1, 16, 16, 16)
         for i in range(self.b):
             x = torch.randint(2, 10, (1,))
             y = torch.randint(2, 10, (1,))
             z = torch.randint(2, 10, (1,))
-            self.train_ds[i, 0, x:x+5, y:y+5, z:z+5] = 1
+            data[i, 0, x:x+5, y:y+5, z:z+5] = 1
+        self.train_ds = TestDataset(data)
 
     def test_baseline_block_0(self):
         model = ConvAutoencoderBaseline(
@@ -265,7 +268,39 @@ class TestTrainingSquares(unittest.TestCase):
         )
 
         trainer.train()
-        results = self.trainer.mean_val_metrics
+        results = trainer.mean_val_metrics
+        self.assertLess(results['MAE'], 0.1)
+        self.assertLess(results['MSE'], 0.01)
+
+    def test_vae_block_1(self):
+        model = VariationalAutoEncoder3D(
+            dim=24,
+            dim_mults=(1, 2, 2, 2),
+            channels=1,
+            z_channels=4,
+            block_type=1,
+            im_shape=(16, 16, 16),
+            group_norm_size=2,
+            final_kernel_size=1,
+        )
+
+        trainer = MyAETrainer(
+            model=model,
+            dataset_train=self.train_ds,
+            dataset_val=self.train_ds,
+            train_batch_size=self.b,
+            train_lr=1e-3,
+            train_num_epochs=100,
+            save_and_sample_every=25,
+            results_folder='test_output_squares_vae_0',
+            cpu_only=True,
+            num_dl_workers=0,
+            kl_weight=1e-6,
+            sample_posterior=False,
+        )
+
+        trainer.train()
+        results = trainer.mean_val_metrics
         self.assertLess(results['MAE'], 0.1)
         self.assertLess(results['MSE'], 0.01)
 
@@ -321,7 +356,8 @@ class TestTrainingRealData(unittest.TestCase):
         print(f'Min: {data.min()}, Max: {data.max()}')
 
 
-        self.train_ds = torch.tensor(data).unsqueeze(0).unsqueeze(0).float()
+        data = torch.tensor(data).unsqueeze(0).unsqueeze(0).float()
+        self.train_ds = TestDataset(data)
 
     def test_baseline_block_0(self):
         model = ConvAutoencoderBaseline(
@@ -353,6 +389,40 @@ class TestTrainingRealData(unittest.TestCase):
         self.assertLess(results['MSE'], 0.05)
         self.assertLess(results['LINF'], 1)
 
+    def test_vae_block_1(self):
+        model = VariationalAutoEncoder3D(
+            dim=32,
+            dim_mults=(1, 2, 2),
+            channels=1,
+            z_channels=1,
+            block_type=1,
+            group_norm_size=2,
+            final_kernel_size=1,
+        )
+
+        trainer = MyAETrainer(
+            model=model,
+            dataset_train=self.train_ds,
+            dataset_val=self.train_ds,
+            train_batch_size=1,
+            train_lr=1e-4,
+            train_num_epochs=100,
+            save_and_sample_every=20,
+            results_folder='test_output_realdata_vae_1',
+            cpu_only=True,
+            num_dl_workers=0,
+            kl_weight=1e-6,
+            sample_posterior=False,
+            #loss=nn.L1Loss(),
+            metric_types=[MetricType.MAE, MetricType.MSE, MetricType.LINF]
+        )
+
+        trainer.train()
+        results = trainer.mean_val_metrics
+        self.assertLess(results['MAE'], 0.2)
+        self.assertLess(results['MSE'], 0.05)
+        self.assertLess(results['LINF'], 1)
+
     def test_vae_block_0(self):
         model = VariationalAutoEncoder3D(
             dim=32,
@@ -367,13 +437,13 @@ class TestTrainingRealData(unittest.TestCase):
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
             train_batch_size=1,
-            train_lr=1e-3,
+            train_lr=1e-4,
             train_num_epochs=100,
-            save_and_sample_every=50,
+            save_and_sample_every=20,
             results_folder='test_output_realdata_vae_0',
             cpu_only=True,
             num_dl_workers=0,
-            kl_weight=1e-2,
+            kl_weight=1e-6,
             sample_posterior=False,
             #loss=nn.L1Loss(),
             metric_types=[MetricType.MAE, MetricType.MSE, MetricType.LINF]

@@ -120,6 +120,10 @@ class MyAETrainer():
         first_batch = next(iter(dl))
         assert len(first_batch.shape) == 5, 'Expected 4D tensor for 3D convolutional model'
 
+        first_batch_posterior = self.model.encode(first_batch)
+        z = first_batch_posterior.mode()
+        self.latent_num_pixels = z.shape[1] * z.shape[2] * z.shape[3] * z.shape[4]
+
         self.mean_val_metric_history = []
         self.mean_train_metric_history = []
 
@@ -216,13 +220,17 @@ class MyAETrainer():
                     if self.kl_weight is not None:
                         pred, posterior = self.model(model_input_data, return_posterior=True, sample_posterior=self.sample_posterior)
                         rec_loss = self.loss(pred, data)
-                        kl_loss = posterior.kl().mean()
+                        kl_loss = posterior.kl()  # KL divergence is summed over CHWD dims, kl() returns one value per batch item
+                        kl_loss = kl_loss / self.latent_num_pixels  # Normalise by number of pixels in latent space
+                        kl_loss = kl_loss.mean()  # Average over batch
+
+                        # Now both terms in the loss are averaged over latent/physical pixels
                         loss = rec_loss + self.kl_weight * kl_loss
                     else:
                         pred = self.model(model_input_data)
                         loss = self.loss(pred, data)
 
-                    epoch_loss.append(float(loss.item()))
+                    epoch_loss.append({'total': loss.item(), 'rec': rec_loss.item(), 'kl': kl_loss.item()})
 
                     self.accelerator.backward(loss)
 
@@ -243,9 +251,9 @@ class MyAETrainer():
                 if exists(self.lr_scheduler):
                     self.lr_scheduler.step()
 
-                epoch_loss = np.mean(epoch_loss)
+                epoch_loss = {k: np.mean([x[k] for x in epoch_loss]) for k in epoch_loss[0]}
                 loss_history.append(epoch_loss)
-                pbar.set_description(f'Avg. epoch loss: {epoch_loss:.4f}')
+                pbar.set_description(f'Avg. epoch loss: {epoch_loss}')
 
                 if accelerator.is_main_process:
                     logger.info(str(pbar))
@@ -292,21 +300,25 @@ class MyAETrainer():
         logger.info(f'[Accelerate device {device}] evaluation complete!')
 
 
-    def write_loss_history(self, loss_history):
+    def write_loss_history(self, loss_history: list[dict]):
         """Write the loss history to file as a json file and a png plot
         """
+        loss_history_type_to_list = {k: [x[k] for x in loss_history] for k in loss_history[0]}
+
         if self.accelerator.is_main_process:
             loss_history_path = self.results_folder / 'loss_history.json'
             with open(loss_history_path, 'w') as f:
-                json.dump(loss_history, f)
+                json.dump(loss_history_type_to_list, f)
             logger.info(f'Loss history written to {loss_history_path}')
 
             # Also write png loss plot
             fig, ax = plt.subplots(figsize=(3, 3), dpi=200)
-            ax.plot(loss_history)
+            for k in loss_history_type_to_list:
+                ax.plot(loss_history_type_to_list[k], label=k)
             ax.set_yscale('log')
             ax.set_xlabel('Epoch')
             ax.set_ylabel('Loss')
+            ax.legend()
             fig.tight_layout()
             fig.savefig(self.results_folder / 'loss_history.png')
             plt.close(fig)
