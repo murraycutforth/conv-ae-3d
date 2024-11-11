@@ -395,8 +395,13 @@ class MyAETrainer():
          - data is single channel
         """
         metric_results = []
+        dataset = dataloader.dataset
 
         for pred, data in self.run_inference(dataloader, max_n_batches):
+            # Compute metrics on un-normalised data
+            data = dataset.unnormalise_array(data)
+            pred = dataset.unnormalise_array(pred)
+
             row = compute_metrics_single_array(data, pred, self.metric_types)
             metric_results.append(row)
 
