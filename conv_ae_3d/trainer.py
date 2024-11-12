@@ -253,7 +253,7 @@ class MyAETrainer():
                         if torch.cuda.is_available():
                             if self.accelerator.is_main_process:
                                 memory_summary = torch.cuda.memory_summary()
-                            
+
                                 logger.info(memory_summary)
                                 with open(self.results_folder / 'memory_summary.txt', 'w') as f:
                                     f.write(memory_summary)
@@ -352,6 +352,10 @@ class MyAETrainer():
             logger.info(f'Writing all val set predictions to {outdir}')
 
         for i, (pred, data) in enumerate(self.run_inference(self.dl_val, max_n_batches=None)):
+            # Write out the un-normalised data for later analysis
+            data = self.dataset_val.unnormalise_array(data)
+            pred = self.dataset_val.unnormalise_array(pred)
+
             if self.accelerator.is_main_process:
                 np.savez_compressed(outdir / f"{i}.npz", pred=pred, data=data)
 
