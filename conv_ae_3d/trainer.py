@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from conv_ae_3d.metrics import MetricType, compute_metrics_single_array
+from conv_ae_3d.power_spectrum import compute_3d_power_spectrum
 
 logger = logging.getLogger(__name__)
 
@@ -397,6 +398,9 @@ class MyAETrainer():
         metric_results = []
         dataset = dataloader.dataset
 
+        preds = []
+        gts = []
+
         for pred, data in self.run_inference(dataloader, max_n_batches):
             # Compute metrics on un-normalised data
             data = dataset.unnormalise_array(data)
@@ -405,7 +409,18 @@ class MyAETrainer():
             row = compute_metrics_single_array(data, pred, self.metric_types)
             metric_results.append(row)
 
+            preds.append(pred)
+            gts.append(data)
+
         if self.accelerator.is_main_process:
+            # Write out some additional diagnostic plots
+            self.write_intensity_histograms(np.array(preds), np.array(gts))
+            self.write_psd_plots(np.array(preds), np.array(gts))
+
+            # Write out the raw preds and gts at this time step, for more in-depth analysis later on
+            np.savez_compressed(self.results_folder / f"preds_{self.epoch}.npz", preds=np.array(preds))
+            np.savez_compressed(self.results_folder / f"gts_{self.epoch}.npz", gts=np.array(gts))
+
             df = pd.DataFrame(metric_results)
             logger.info(f'Computed metrics from a total of {len(df)} samples')
             return df
@@ -445,6 +460,83 @@ class MyAETrainer():
             plt.close(fig)
 
             logger.info(f'Metric history plot saved to {self.results_folder / "metric_history.png"}')
+
+    def write_intensity_histograms(self, preds, data):
+        """Plot the intensity histograms of the data and the predictions
+        We have two lists of 3D arrays here. Note that we expect this to be called by main process only.
+        """
+        assert len(preds) > 0
+        assert len(data) > 0
+        assert preds[0].shape == data[0].shape
+        assert preds[0].ndim == 3
+
+        outdir = self.results_folder / 'intensity_histograms'
+        outdir.mkdir(exist_ok=True)
+
+        fig, ax = plt.subplots(1, 1, figsize=(3, 3), dpi=150)
+
+        ax.hist(data.flatten(), bins=100, alpha=0.5, label='Data', color='blue')
+        ax.hist(preds.flatten(), bins=100, alpha=0.5, label='Preds', color='red')
+        ax.set_yscale('log')
+        ax.set_xlabel('Intensity')
+        ax.set_ylabel('Frequency')
+        ax.legend()
+
+        fig.tight_layout()
+        fig.savefig(outdir / f'hist_{self.epoch}.png')
+        plt.close(fig)
+
+        # Save raw data as well
+        np.save(outdir / f'hist_pred_intensities_{self.epoch}.npy', preds)
+        np.save(outdir / f'hist_data_{self.epoch}.npy', data)
+
+    def write_psd_plots(self, preds, data):
+        """Plot the average power spectrum of the data and the predictions
+        We have two lists of 4D arrays here. Note that we expect this to be called by main process only.
+        """
+        assert len(preds) > 0
+        assert len(data) > 0
+        assert preds[0].shape == data[0].shape, f"Expected same shape, got {preds[0].shape} and {data[0].shape}"
+
+        # First we need to subset our arrays so they are all cubes
+        shortest_side = min(preds[0].shape)
+
+        # Then take the average psd of each pred
+        pred_psds = []
+        for pred in preds:
+            pred_psds.append(
+                compute_3d_power_spectrum(pred[:shortest_side, :shortest_side, :shortest_side],
+                                              P=shortest_side)[1])
+        avg_pred_psds = np.mean(pred_psds, axis=0)
+
+        data_psds = []
+        for d in data:
+            data_psds.append(compute_3d_power_spectrum(d[:shortest_side, :shortest_side, :shortest_side],
+                                                       P=shortest_side)[1])
+        avg_data_psds = np.mean(data_psds, axis=0)
+
+        ks = compute_3d_power_spectrum(preds[0][:shortest_side, :shortest_side, :shortest_side],
+                                       P=shortest_side)[0]
+
+        outdir = self.results_folder / 'psd_plots'
+        outdir.mkdir(exist_ok=True)
+
+        fig, ax = plt.subplots(figsize=(3, 3), dpi=200)
+        ax.plot(ks, avg_pred_psds, label='Preds')
+        ax.plot(ks, avg_data_psds, label='Data')
+        ax.set_yscale('log')
+        ax.set_xscale('log')
+        ax.set_xlabel('k')
+        ax.set_ylabel('Power Spectrum')
+        ax.legend()
+        fig.tight_layout()
+        fig.savefig(outdir / f'psd_{self.epoch}.png')
+        plt.close(fig)
+
+        # Save raw data as well
+        np.save(outdir / f'psd_channel_preds_{self.epoch}.npy', avg_pred_psds)
+        np.save(outdir / f'psd_channel_data_{self.epoch}.npy', avg_data_psds)
+        np.save(outdir / f'psd_channel_ks_{self.epoch}.npy', ks)
 
     def plot_intermediate_val_samples(self, n_batches: int = 20):
         """Plot samples from the validation set, and save them to disk
