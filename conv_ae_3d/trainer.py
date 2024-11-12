@@ -207,13 +207,7 @@ class MyAETrainer():
         logger.info(f'[Accelerate device {device}] Training started')
 
         loss_history = []
-
-        if exists(self.results_folder):
-            if not self.low_data_mode:
-                self.plot_intermediate_val_samples()
-
         accelerator.wait_for_everyone()
-
         self.evaluate_metrics()
         step = 0
 
@@ -279,7 +273,7 @@ class MyAETrainer():
                     self.evaluate_metrics()
 
                     if exists(self.results_folder):
-                        self.save(self.epoch)
+                        #self.save(self.epoch)
                         self.plot_intermediate_val_samples()
                         self.write_loss_history(loss_history)
 
@@ -296,6 +290,7 @@ class MyAETrainer():
         self.evaluate_metrics()
         if exists(self.results_folder):
             self.plot_metric_history()
+            
         logger.info(f'[Accelerate device {self.accelerator.device}] Training complete!')
 
     def eval(self):
@@ -553,7 +548,7 @@ class MyAETrainer():
         np.save(outdir / f'psd_gt_{self.epoch}.npy', avg_data_psds)
         np.save(outdir / f'psd_ks_{self.epoch}.npy', ks)
 
-    def plot_intermediate_val_samples(self, n_batches: int = 20):
+    def plot_intermediate_val_samples(self, n_batches: int = 10):
         """Plot samples from the validation set, and save them to disk
         """
         n_batches = min(n_batches, len(self.dl_val))
