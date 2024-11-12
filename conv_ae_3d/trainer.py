@@ -130,6 +130,13 @@ class MyAETrainer():
         logger.info(f'Physical space size: {physical_num_pixels}')
         logger.info(f'Compression ratio: {physical_num_pixels / self.latent_num_pixels}')
 
+        with open(self.results_folder / 'run_info.json', 'w') as f:
+            json.dump({
+                'latent_num_pixels': self.latent_num_pixels,
+                'physical_num_pixels': physical_num_pixels,
+                'compression_ratio': physical_num_pixels / self.latent_num_pixels,
+            }, f)
+
         self.mean_val_metric_history = []
         self.mean_train_metric_history = []
 
@@ -244,8 +251,12 @@ class MyAETrainer():
 
                     if step == 0:
                         if torch.cuda.is_available():
-                            memory_summary = torch.cuda.memory_summary()
-                            logger.info(memory_summary)
+                            if self.accelerator.is_main_process:
+                                memory_summary = torch.cuda.memory_summary()
+                            
+                                logger.info(memory_summary)
+                                with open(self.results_folder / 'memory_summary.txt', 'w') as f:
+                                    f.write(memory_summary)
 
                     step += 1
                     self.opt.step()
@@ -534,9 +545,9 @@ class MyAETrainer():
         plt.close(fig)
 
         # Save raw data as well
-        np.save(outdir / f'psd_channel_preds_{self.epoch}.npy', avg_pred_psds)
-        np.save(outdir / f'psd_channel_data_{self.epoch}.npy', avg_data_psds)
-        np.save(outdir / f'psd_channel_ks_{self.epoch}.npy', ks)
+        np.save(outdir / f'psd_preds_{self.epoch}.npy', avg_pred_psds)
+        np.save(outdir / f'psd_gt_{self.epoch}.npy', avg_data_psds)
+        np.save(outdir / f'psd_ks_{self.epoch}.npy', ks)
 
     def plot_intermediate_val_samples(self, n_batches: int = 20):
         """Plot samples from the validation set, and save them to disk
