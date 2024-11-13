@@ -8,6 +8,34 @@ from conv_ae_3d.models.vae_model import VariationalAutoEncoder3D
 from conv_ae_3d.utils import logger
 
 
+def vae_inference_single_image(model, dataset, idx, sample_posterior=False):
+    """Run inference on a single image from the dataset
+    """
+    model.eval()
+    with torch.no_grad():
+        x = dataset[idx].unsqueeze(0)
+        posterior = model.encode(x)
+
+        if sample_posterior:
+            z = posterior.sample()
+        else:
+            z = posterior.mode()
+
+        x_recon = model.decode(z)
+
+        # Un-normalise x and x_recon
+        x = x.cpu().numpy().squeeze()
+        x_recon = x_recon.cpu().numpy().squeeze()
+
+        assert x.shape == x_recon.shape, f"Shapes of x and x_recon do not match: {x.shape} vs {x_recon.shape}"
+        assert x.ndim == 3, f"Expected 3D image, got {x.ndim}D image"
+
+        x = dataset.unnormalise_array(x)
+        x_recon = dataset.unnormalise_array(x_recon)
+
+        return x, x_recon, posterior
+
+
 def construct_and_load_pretrained_baseline_model(restart_dir: str,
                                                  milestone,
                                                  model_type,

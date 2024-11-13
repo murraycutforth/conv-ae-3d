@@ -4,6 +4,7 @@ import enum
 import numpy as np
 from skimage.metrics import structural_similarity as ssim
 from scipy.spatial.distance import directed_hausdorff
+from conv_ae_3d.power_spectrum import compute_3d_power_spectrum
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,33 @@ class MetricType(enum.Enum):
     SSIM = 'ssim'
     DICE = 'dice'
     HAUSDORFF = 'hausdorff'
+    REL_L1 = 'rel_L1'
+    REL_L2 = 'rel_L2'
+    REL_LINF = 'rel_Linf'
+    REL_CONSERVATION_ERR = 'rel_conservation_err'
+    PSD_ERR = 'psd_err'
 
+
+def compute_psd_err(gt_patch, pred_patch):
+    # TODO: compute power spectrum, and then return the average relative error between the PSD at each k
+    pass
+
+
+
+def compute_rel_conservation_err(gt_patch, pred_patch):
+    return np.abs(np.sum(gt_patch) - np.sum(pred_patch)) / np.sum(gt_patch)
+
+
+def compute_rel_l1(gt_patch, pred_patch):
+    return np.linalg.norm(gt_patch.flatten() - pred_patch.flatten(), ord=1) / np.linalg.norm(gt_patch.flatten(), ord=1)
+
+
+def compute_rel_l2(gt_patch, pred_patch):
+    return np.linalg.norm(gt_patch.flatten() - pred_patch.flatten(), ord=2) / np.linalg.norm(gt_patch.flatten(), ord=2)
+
+
+def compute_rel_linf(gt_patch, pred_patch):
+    return np.linalg.norm(gt_patch.flatten() - pred_patch.flatten(), ord=np.inf) / np.linalg.norm(gt_patch.flatten(), ord=np.inf)
 
 
 def compute_mae(gt_patch, pred_patch):
@@ -81,7 +108,11 @@ metric_type_to_function = {
     MetricType.LINF: linf_error,
     MetricType.SSIM: ssim_error,
     MetricType.DICE: dice_coefficient,
-    MetricType.HAUSDORFF: hausdorff_distance
+    MetricType.HAUSDORFF: hausdorff_distance,
+    MetricType.REL_L1: compute_rel_l1,
+    MetricType.REL_L2: compute_rel_l2,
+    MetricType.REL_LINF: compute_rel_linf,
+    MetricType.REL_CONSERVATION_ERR: compute_rel_conservation_err,
 }
 
 

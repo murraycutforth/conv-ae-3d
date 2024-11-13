@@ -290,7 +290,7 @@ class MyAETrainer():
         self.evaluate_metrics()
         if exists(self.results_folder):
             self.plot_metric_history()
-            
+
         logger.info(f'[Accelerate device {self.accelerator.device}] Training complete!')
 
     def eval(self):
@@ -497,8 +497,9 @@ class MyAETrainer():
         plt.close(fig)
 
         # Save raw data as well
-        np.save(outdir / f'hist_pred_intensities_{self.epoch}.npy', preds)
-        np.save(outdir / f'hist_data_{self.epoch}.npy', data)
+        if self.epoch == self.train_num_epochs:
+            np.save(outdir / f'hist_pred_intensities_{self.epoch}.npy', preds)
+            np.save(outdir / f'hist_data_{self.epoch}.npy', data)
 
     def write_psd_plots(self, preds, data):
         """Plot the average power spectrum of the data and the predictions
@@ -544,9 +545,10 @@ class MyAETrainer():
         plt.close(fig)
 
         # Save raw data as well
-        np.save(outdir / f'psd_preds_{self.epoch}.npy', avg_pred_psds)
-        np.save(outdir / f'psd_gt_{self.epoch}.npy', avg_data_psds)
-        np.save(outdir / f'psd_ks_{self.epoch}.npy', ks)
+        if self.epoch == self.train_num_epochs:
+            np.save(outdir / f'psd_preds_{self.epoch}.npy', avg_pred_psds)
+            np.save(outdir / f'psd_gt_{self.epoch}.npy', avg_data_psds)
+            np.save(outdir / f'psd_ks_{self.epoch}.npy', ks)
 
     def plot_intermediate_val_samples(self, n_batches: int = 10):
         """Plot samples from the validation set, and save them to disk
