@@ -15,12 +15,13 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from conv_ae_3d.metrics import MetricType, compute_metrics_single_array
+from conv_ae_3d.models.vae_model import VariationalAutoEncoder3D
 from conv_ae_3d.power_spectrum import compute_3d_power_spectrum
 
 logger = logging.getLogger(__name__)
 
 
-class MyAETrainer():
+class MyVAETrainer():
     """High level class for training a general 3D autoencoder. Provides interface for training, saving, and loading
     models. Also includes plotting functions.
     """
@@ -44,7 +45,7 @@ class MyAETrainer():
             denoising: bool = False,
             noise_std: float = 0,
             loss: nn.Module = nn.MSELoss(),
-            kl_weight: float = None,
+            kl_weight: float = 1e-3,
             sample_posterior: bool = False,
             lr_scheduler = None,
             lr_scheduler_kwargs = None,
@@ -75,13 +76,16 @@ class MyAETrainer():
 
         assert hasattr(self.dataset_val, 'unnormalise_array'), "Dataset must have an unnormalise_array method for plotting"
 
+        # Check that model is of type VariationalAutoEncoder3D
+        assert isinstance(self.model, VariationalAutoEncoder3D), "Model must be of type VariationalAutoEncoder3D"
+
         # Output dir
         if results_folder is None:
             logger.info(f'No results folder specified, skipping most output')
             self.results_folder = None
         else:
             self.results_folder = Path(results_folder)
-            self.results_folder.mkdir(exist_ok = True)
+            self.results_folder.mkdir(exist_ok = True, parents=True)
 
         if self.low_data_mode:
             self.save_and_sample_every = self.train_num_epochs + 1
@@ -224,18 +228,14 @@ class MyAETrainer():
                     else:
                         model_input_data = data
 
-                    if self.kl_weight is not None:
-                        pred, posterior = self.model(model_input_data, return_posterior=True, sample_posterior=self.sample_posterior)
-                        rec_loss = self.loss(pred, data)
-                        kl_loss = posterior.kl()  # KL divergence is summed over CHWD dims, kl() returns one value per batch item
-                        kl_loss = kl_loss / self.latent_num_pixels  # Normalise by number of pixels in latent space
-                        kl_loss = kl_loss.mean()  # Average over batch
+                    pred, posterior = self.model(model_input_data, return_posterior=True, sample_posterior=self.sample_posterior)
+                    rec_loss = self.loss(pred, data)
+                    kl_loss = posterior.kl()  # KL divergence is summed over CHWD dims, kl() returns one value per batch item
+                    kl_loss = kl_loss / self.latent_num_pixels  # Normalise by number of pixels in latent space
+                    kl_loss = kl_loss.mean()  # Average over batch
 
-                        # Now both terms in the loss are averaged over latent/physical pixels
-                        loss = rec_loss + self.kl_weight * kl_loss
-                    else:
-                        pred = self.model(model_input_data)
-                        loss = self.loss(pred, data)
+                    # Now both terms in the loss are averaged over latent/physical pixels
+                    loss = rec_loss + self.kl_weight * kl_loss
 
                     epoch_loss.append({'Total': loss.item(), 'Rec': rec_loss.item(), 'KL': kl_loss.item()})
 
@@ -264,7 +264,7 @@ class MyAETrainer():
 
                 epoch_loss = {k: np.mean([x[k] for x in epoch_loss]) for k in epoch_loss[0]}
                 loss_history.append(epoch_loss)
-                pbar.set_description(f'Avg. epoch loss: {epoch_loss}')
+                pbar.set_description(f'Avg. epoch loss: Total={epoch_loss["Total"]:.3g}, Rec={epoch_loss["Rec"]:.3g}, KL={epoch_loss["KL"]:.3g}')
 
                 if accelerator.is_main_process:
                     logger.info(str(pbar))

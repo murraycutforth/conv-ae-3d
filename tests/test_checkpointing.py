@@ -2,7 +2,7 @@ import unittest
 import logging
 import torch
 import os
-from conv_ae_3d.trainer import MyAETrainer
+from conv_ae_3d.trainer_vae import MyVAETrainer
 from conv_ae_3d.models.baseline_model import ConvAutoencoderBaseline
 
 
@@ -25,7 +25,7 @@ class TestCheckpointing(unittest.TestCase):
             im_shape=(32, 32, 32)
         )
 
-        trainer = MyAETrainer(
+        trainer = MyVAETrainer(
             model=model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
@@ -60,7 +60,7 @@ class TestCheckpointing(unittest.TestCase):
         )
 
         with self.assertRaises(RuntimeError):
-            _ = MyAETrainer(
+            _ = MyVAETrainer(
                 model=model,
                 dataset_train=self.train_ds,
                 dataset_val=self.train_ds,
@@ -85,7 +85,7 @@ class TestCheckpointing(unittest.TestCase):
             im_shape=(32, 32, 32)
         )
 
-        trainer = MyAETrainer(
+        trainer = MyVAETrainer(
             model=model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
@@ -114,7 +114,7 @@ class TestCheckpointing(unittest.TestCase):
             im_shape=(32, 32, 32)
         )
 
-        trainer = MyAETrainer(
+        trainer = MyVAETrainer(
             model=model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
@@ -141,7 +141,7 @@ class TestCheckpointing(unittest.TestCase):
             im_shape=(32, 32, 32)
         )
 
-        reloaded_trainer = MyAETrainer(
+        reloaded_trainer = MyVAETrainer(
             model=model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
@@ -172,7 +172,7 @@ class TestCheckpointing(unittest.TestCase):
             im_shape=(32, 32, 32)
         )
 
-        trainer = MyAETrainer(
+        trainer = MyVAETrainer(
             model=model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
@@ -205,7 +205,7 @@ class TestCheckpointing(unittest.TestCase):
             im_shape=(32, 32, 32)
         )
 
-        trainer = MyAETrainer(
+        trainer = MyVAETrainer(
             model=model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,

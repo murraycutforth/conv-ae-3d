@@ -5,15 +5,19 @@ from torch import nn
 
 from conv_ae_3d.models.baseline_model import ConvAutoencoderBaseline
 from conv_ae_3d.models.vae_model import VariationalAutoEncoder3D
-from conv_ae_3d.utils import logger
+from conv_ae_3d.utils import logger, DiagonalGaussianDistribution
 
 
-def vae_inference_single_image(model, dataset, idx, sample_posterior=False):
+def vae_inference_single_image(model, dataset, idx, sample_posterior=False, device=None):
     """Run inference on a single image from the dataset
     """
     model.eval()
     with torch.no_grad():
         x = dataset[idx].unsqueeze(0)
+
+        if device is not None:
+            x = x.to(device)
+
         posterior = model.encode(x)
 
         if sample_posterior:
@@ -32,6 +36,9 @@ def vae_inference_single_image(model, dataset, idx, sample_posterior=False):
 
         x = dataset.unnormalise_array(x)
         x_recon = dataset.unnormalise_array(x_recon)
+
+        if device is not None:
+            posterior = DiagonalGaussianDistribution(posterior.parameters.cpu())
 
         return x, x_recon, posterior
 
