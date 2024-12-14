@@ -94,12 +94,7 @@ class MyAETrainer(MyTrainerBase):
 
                 for data in self.dl:
 
-                    if self.denoising:
-                        model_input_data = data + torch.randn_like(data) * self.noise_std
-                    else:
-                        model_input_data = data
-
-                    pred = self.model(model_input_data)
+                    pred = self.model(data)
                     loss = self.loss(pred, data)
 
                     epoch_loss.append({'Total': loss.item()})
@@ -145,7 +140,7 @@ class MyAETrainer(MyTrainerBase):
                 pbar.update(1)
 
         if exists(self.results_folder):
-            self.save(self.epoch)
+            self.save('final')
             self.write_loss_history(loss_history)
 
             if not self.low_data_mode:

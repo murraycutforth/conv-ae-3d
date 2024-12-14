@@ -64,9 +64,6 @@ class MyTrainerBase():
 
         assert hasattr(self.dataset_val, 'unnormalise_array'), "Dataset must have an unnormalise_array method for plotting"
 
-        # Check that model is of type VariationalAutoEncoder3D
-        assert isinstance(self.model, VariationalAutoEncoder3D), "Model must be of type VariationalAutoEncoder3D"
-
         # Output dir
         if results_folder is None:
             logger.info(f'No results folder specified, skipping most output')
@@ -85,8 +82,26 @@ class MyTrainerBase():
         else:
             self.lr_scheduler = None
 
-        # Load from checkpoint
-        if restart_from_milestone is not None:
+        new_final_model_path = self.results_folder / 'model-final.pt'
+        if new_final_model_path.exists():
+            # Then we want to continue training from this run using the 'model-final.pt' checkpoint
+            assert restart_from_milestone is None
+            assert restart_dir is None
+            restart_dir = self.results_folder
+            restart_from_milestone = 'final'
+
+            logger.info(f'Continuing training from final model checkpoint at {new_final_model_path}')
+
+            self.load(restart_from_milestone, restart_dir)
+            self.train_num_epochs += self.epoch
+            self.reset_learning_rate(train_lr)
+
+            # Rename previous final model to model-step.pt
+            prev_final_path = self.results_folder / 'model-final.pt'
+            new_step_path = self.results_folder / f'model-{self.epoch}.pt'
+            prev_final_path.rename(new_step_path)
+        elif restart_from_milestone is not None:
+            # Load from checkpoint
             assert exists(restart_dir), f"Restart directory at {restart_dir} must exist"
             self.load(restart_from_milestone, restart_dir)
             self.train_num_epochs += self.epoch
@@ -161,7 +176,7 @@ class MyTrainerBase():
             self.accelerator.save(data, str(self.results_folder / f'model-{milestone}.pt'))
             logger.info(f'Saving model at epoch {self.epoch}')
 
-    def load(self, milestone: int, restart_dir: str) -> None:
+    def load(self, milestone, restart_dir) -> None:
         """Load model checkpoint from disk
         """
         restart_dir = Path(restart_dir)
@@ -235,7 +250,7 @@ class MyTrainerBase():
         if self.accelerator.is_main_process:
             logger.info(f'Writing all val set predictions to {outdir}')
 
-        for i, (pred, data) in enumerate(self.run_inference(self.dl_val, max_n_batches=None)):
+        for i, (pred, data) in enumerate(self.run_inference(self.dl_val, max_n_batches=min(100, len(self.dl_val)))):
             # Write out the un-normalised data for later analysis
             data = self.dataset_val.unnormalise_array(data)
             pred = self.dataset_val.unnormalise_array(pred)

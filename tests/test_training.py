@@ -644,7 +644,7 @@ class TestTrainingRealData(unittest.TestCase):
             block_type=0,
         )
 
-        trainer = MyVAETrainer(
+        trainer = MyAETrainer(
             model=model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
