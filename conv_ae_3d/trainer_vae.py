@@ -67,9 +67,6 @@ class MyVAETrainer(MyTrainerBase):
         self.kl_weight = kl_weight
         self.sample_posterior = sample_posterior
 
-        # Check that model is of type VariationalAutoEncoder3D
-        assert isinstance(self.model, VariationalAutoEncoder3D), "Model must be of type VariationalAutoEncoder3D. Got {type(self.model)}."
-
         # Check the size of dataset images
         first_batch = next(iter(self.dl))
         assert len(first_batch.shape) == 5, 'Expected 4D tensor for 3D convolutional model'
