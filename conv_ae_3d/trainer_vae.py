@@ -66,12 +66,13 @@ class MyVAETrainer(MyTrainerBase):
 
         self.kl_weight = kl_weight
         self.sample_posterior = sample_posterior
+        unwrapped_model = self.accelerator.unwrap_model(self.model)
 
         # Check the size of dataset images
         first_batch = next(iter(self.dl))
         assert len(first_batch.shape) == 5, 'Expected 4D tensor for 3D convolutional model'
 
-        first_batch_posterior = self.model.encode(first_batch)
+        first_batch_posterior = unwrapped_model.encode(first_batch)
         z = first_batch_posterior.mode()
         self.latent_num_pixels = z.shape[1] * z.shape[2] * z.shape[3] * z.shape[4]
         self.write_run_info(first_batch, z)
