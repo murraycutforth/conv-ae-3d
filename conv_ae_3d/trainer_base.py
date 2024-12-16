@@ -61,6 +61,8 @@ class MyTrainerBase():
         self.dataset_val = dataset_val
         self.loss = loss
         self.metric_types = metric_types
+        self.num_output_images = 100
+        self.num_samples_for_metrics = 1000
 
         assert hasattr(self.dataset_val, 'unnormalise_array'), "Dataset must have an unnormalise_array method for plotting"
 
@@ -197,25 +199,6 @@ class MyTrainerBase():
         if exists(self.lr_scheduler) and exists(data['lr_scheduler']):
             self.lr_scheduler.load_state_dict(data['lr_scheduler'])
 
-    def eval(self):
-        """Run evaluation loop only of pretrained model
-        """
-        assert exists(self.results_folder), "Results folder does not exist"
-        accelerator = self.accelerator
-        device = accelerator.device
-
-        if accelerator.is_main_process:
-            logger.info(f'Accelerate parallelism strategy: {accelerator.state.distributed_type}')
-
-        logger.info(f'[Accelerate device {device}] evaluation started')
-
-        self.write_all_val_set_predictions()
-        self.plot_final_val_samples()
-        self.evaluate_metrics()
-
-        logger.info(f'[Accelerate device {device}] evaluation complete!')
-
-
     def write_loss_history(self, loss_history: list[dict]):
         """Write the loss history to file as a json file and a png plot
         """
@@ -243,6 +226,7 @@ class MyTrainerBase():
         """In this method we make predictions on the val set, and write out all predictions to file.
 
         Note: the ordering is not guaranteed to be consistent if multiprocessing
+        Note: this method is currently un-used.
         """
         outdir = self.results_folder / 'final_val_predictions'
         outdir.mkdir(exist_ok=True)
@@ -259,7 +243,7 @@ class MyTrainerBase():
                 np.savez_compressed(outdir / f"{i}.npz", pred=pred, data=data)
 
     def evaluate_metrics(self):
-        n_eval_batches = min(100, len(self.dl_val))
+        n_eval_batches = max(1, self.num_samples_for_metrics // self.batch_size)
         logger.info(f'Evaluating metrics on {n_eval_batches} batches of validation and test data')
         df_val = self._evaluate_metrics_inner(self.dl_val, max_n_batches=n_eval_batches, split='val')
         df_train = self._evaluate_metrics_inner(self.dl, max_n_batches=n_eval_batches, split='train')
@@ -456,12 +440,14 @@ class MyTrainerBase():
             np.save(outdir / f'psd_gt_{split}_{self.epoch}.npy', avg_data_psds)
             np.save(outdir / f'psd_ks_{split}_{self.epoch}.npy', ks)
 
-    def plot_intermediate_val_samples(self, n_batches: int = 10):
-        """Plot samples from the validation set, and save them to disk
+    def plot_intermediate_val_samples(self):
+        """Plot images from the validation set, and save them to disk
         """
-        n_batches = min(n_batches, len(self.dl_val))
+        n_batches = min(1, self.num_output_images // self.batch_size)
         outdir = self.results_folder / 'intermediate_val_samples'
         outdir.mkdir(exist_ok=True)
+
+        logger.info(f"Writing {n_batches} batches of intermediate sample images to {outdir}")
 
         for i, (pred, data) in enumerate(self.run_inference(self.dl_val, max_n_batches=n_batches)):
             if self.accelerator.is_main_process:
@@ -472,15 +458,21 @@ class MyTrainerBase():
             logger.info(f"Saved {n_batches} intermediate samples to {outdir}")
 
     def plot_final_val_samples(self):
-        """Plot samples from the validation set, and save them to disk
+        """Plot samples from the validation set, and save them to disk.
+
+        Here we plot both normalised and un-normalised data.
         """
+        n_batches = min(1, self.num_output_images // self.batch_size)
+
         outdir = self.results_folder / 'final_val_samples'
         outdir.mkdir(exist_ok=True)
 
         outdir_un = self.results_folder / 'final_val_samples_unnormalised'
         outdir_un.mkdir(exist_ok=True)
 
-        for i, (pred, data) in enumerate(self.run_inference(self.dl_val, max_n_batches=None)):
+        logger.info(f"Writing {n_batches} batches of intermediate sample images to {outdir}")
+
+        for i, (pred, data) in enumerate(self.run_inference(self.dl_val, max_n_batches=n_batches)):
             if self.accelerator.is_main_process:
                 outpath = outdir / f"final_{i}_slice.png"
                 write_slice_plot(outpath, data, pred)
@@ -525,5 +517,4 @@ def write_slice_plot(outpath: Path, data: np.ndarray, pred: np.ndarray):
     fig.savefig(outpath)
     plt.close(fig)
 
-    logger.info(f"Saved samples spatial slice plot to {outpath}")
 
