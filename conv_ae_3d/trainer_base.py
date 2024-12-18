@@ -61,8 +61,8 @@ class MyTrainerBase():
         self.dataset_val = dataset_val
         self.loss = loss
         self.metric_types = metric_types
-        self.num_output_images = 100
-        self.num_samples_for_metrics = 1000
+        self.num_output_images = 25
+        self.num_samples_for_metrics = 100
 
         assert hasattr(self.dataset_val, 'unnormalise_array'), "Dataset must have an unnormalise_array method for plotting"
 
@@ -244,6 +244,8 @@ class MyTrainerBase():
 
     def evaluate_metrics(self):
         n_eval_batches = max(1, self.num_samples_for_metrics // self.batch_size)
+        n_eval_batches = min(n_eval_batches, len(self.dl_val))
+
         logger.info(f'Evaluating metrics on {n_eval_batches} batches of validation and test data')
         df_val = self._evaluate_metrics_inner(self.dl_val, max_n_batches=n_eval_batches, split='val')
         df_train = self._evaluate_metrics_inner(self.dl, max_n_batches=n_eval_batches, split='train')
@@ -302,6 +304,7 @@ class MyTrainerBase():
         gts = []
 
         for pred, data in self.run_inference(dataloader, max_n_batches):
+
             # Compute metrics on un-normalised data
             data = dataset.unnormalise_array(data)
             pred = dataset.unnormalise_array(pred)
@@ -443,7 +446,9 @@ class MyTrainerBase():
     def plot_intermediate_val_samples(self):
         """Plot images from the validation set, and save them to disk
         """
-        n_batches = min(1, self.num_output_images // self.batch_size)
+        n_batches = max(1, self.num_output_images // self.batch_size)
+        n_batches = min(n_batches, len(self.dl_val))
+
         outdir = self.results_folder / 'intermediate_val_samples'
         outdir.mkdir(exist_ok=True)
 
@@ -462,7 +467,8 @@ class MyTrainerBase():
 
         Here we plot both normalised and un-normalised data.
         """
-        n_batches = min(1, self.num_output_images // self.batch_size)
+        n_batches = max(1, self.num_output_images // self.batch_size)
+        n_batches = min(n_batches, len(self.dl_val))
 
         outdir = self.results_folder / 'final_val_samples'
         outdir.mkdir(exist_ok=True)

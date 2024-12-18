@@ -126,7 +126,7 @@ class ConvAutoencoderBaseline(nn.Module):
                  channels,
                  z_channels,
                  block_type,
-                 im_shape=None):
+                 ):
         super().__init__()
         self.encoder = Encoder(dim, dim_mults, channels, z_channels, block_type=block_type)
         self.decoder = Decoder(dim, dim_mults, channels, z_channels, block_type=block_type)
@@ -134,12 +134,6 @@ class ConvAutoencoderBaseline(nn.Module):
         num_params = sum(p.numel() for p in self.parameters())
         logger.info(f'Constructed ConvAutoencoderBaseline with {num_params} parameters')
         logger.debug(f'Model architecture: \n{self}')
-
-        if not im_shape is None:
-            final_shape = np.array(im_shape) // (2 ** (len(dim_mults) - 2))
-            bottleneck_size = np.prod(final_shape) * z_channels
-            logger.info(
-                f'Input size: {np.prod(im_shape)}, bottleneck shape: {(z_channels, *final_shape)}, compression ratio: {np.prod(im_shape) / bottleneck_size}')
 
     def encode(self, x):
         z = self.encoder(x)
