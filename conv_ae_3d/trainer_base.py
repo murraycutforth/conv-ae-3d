@@ -315,10 +315,14 @@ class MyTrainerBase():
             preds.append(pred)
             gts.append(data)
 
+        logger.info(f'Computed metrics from a total of {len(metric_results)} samples in {split} set')
+
         if self.accelerator.is_main_process:
             # Write out some additional diagnostic plots
             self.write_intensity_histograms(np.array(preds), np.array(gts), split=split)
+            logger.info(f'Wrote intensity histograms for {split} set')
             self.write_psd_plots(np.array(preds), np.array(gts), split=split)
+            logger.info(f'Wrote power spectrum plots for {split} set')
 
             # Write out the raw preds and gts at this time step, for more in-depth analysis later on
             np.savez_compressed(self.results_folder / f"preds_{self.epoch}.npz", preds=np.array(preds))
@@ -446,13 +450,8 @@ class MyTrainerBase():
     def plot_intermediate_val_samples(self):
         """Plot images from the validation set, and save them to disk
         """
-        print(self.num_output_images)
-        print(self.num_output_images // self.batch_size)
-        print(len(self.dl_val))
         n_batches = max(1, self.num_output_images // self.batch_size)
-        print(n_batches)
         n_batches = min(n_batches, len(self.dl_val))
-        print(n_batches)
 
         outdir = self.results_folder / 'intermediate_val_samples'
         outdir.mkdir(exist_ok=True)
