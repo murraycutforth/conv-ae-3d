@@ -25,10 +25,11 @@ class Encoder3D(nn.Module):
                  ):
         super().__init__()
         self.channels = channels
-        self.init_conv = nn.Conv3d(channels, dim, 1, padding=0)
 
         dims = list(map(lambda m: dim * m, dim_mults))
         in_out = list(zip(dims[:-1], dims[1:]))
+
+        self.init_conv = nn.Conv3d(channels, dims[0], 1, padding=0)
 
         if block_type == 0:
             block_class = BasicBlock
