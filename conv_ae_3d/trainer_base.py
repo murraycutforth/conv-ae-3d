@@ -446,8 +446,13 @@ class MyTrainerBase():
     def plot_intermediate_val_samples(self):
         """Plot images from the validation set, and save them to disk
         """
+        print(self.num_output_images)
+        print(self.num_output_images // self.batch_size)
+        print(len(self.dl_val))
         n_batches = max(1, self.num_output_images // self.batch_size)
+        print(n_batches)
         n_batches = min(n_batches, len(self.dl_val))
+        print(n_batches)
 
         outdir = self.results_folder / 'intermediate_val_samples'
         outdir.mkdir(exist_ok=True)
