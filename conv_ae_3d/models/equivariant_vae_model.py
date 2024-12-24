@@ -29,7 +29,6 @@ class EquivariantEncoder3D(nn.Module):
                  ):
         super().__init__()
         self.channels = channels
-        self.init_conv = nn.Conv3d(channels, dim, 1, padding=0)
 
         dims = list(map(lambda m: dim * m, dim_mults))
         in_out = list(zip(dims[:-1], dims[1:]))
@@ -41,6 +40,7 @@ class EquivariantEncoder3D(nn.Module):
                               act_type=act_type
                               )
 
+        self.init_conv = nn.Conv3d(channels, dims[0], 1, padding=0)
         self.downs = nn.ModuleList([])
         self.num_downsamples = len(in_out)
         self.num_conv = [2] * self.num_downsamples
