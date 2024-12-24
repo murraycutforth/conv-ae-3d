@@ -20,7 +20,8 @@ class Encoder3D(nn.Module):
                  channels: int,
                  z_channels: int,
                  block_type: int,
-                 resnet_block_groups: int = 2
+                 resnet_block_groups: int = 2,
+                 act_type: str = 'silu'
                  ):
         super().__init__()
         self.channels = channels
@@ -32,7 +33,7 @@ class Encoder3D(nn.Module):
         if block_type == 0:
             block_class = BasicBlock
         elif block_type == 1:
-            block_class = partial(ResnetBlock, groups=resnet_block_groups)
+            block_class = partial(ResnetBlock, groups=resnet_block_groups, act_type=act_type)
         else:
             raise ValueError(f"Invalid block type: {block_type}")
 
@@ -72,7 +73,8 @@ class Decoder3D(nn.Module):
                  z_channels: int,
                     block_type: int,
                  resnet_block_groups: int = 2,
-                 final_kernel_size: int = 3
+                 final_kernel_size: int = 3,
+                 act_type: str = 'silu'
                  ):
         super().__init__()
         self.channels = channels
@@ -83,7 +85,7 @@ class Decoder3D(nn.Module):
         if block_type == 0:
             block_class = BasicBlock
         elif block_type == 1:
-            block_class = partial(ResnetBlock, groups=resnet_block_groups)
+            block_class = partial(ResnetBlock, groups=resnet_block_groups, act_type=act_type)
         else:
             raise ValueError(f"Invalid block type: {block_type}")
 
@@ -128,11 +130,12 @@ class VariationalAutoEncoder3D(nn.Module):
                  z_channels,
                  block_type,
                  group_norm_size: int = 4,
+                 act_type: str = 'silu',
                  final_kernel_size: int = 3,
                  im_shape = None):
         super().__init__()
-        self.encoder = Encoder3D(dim, dim_mults, channels, z_channels, block_type=block_type, resnet_block_groups=group_norm_size)
-        self.decoder = Decoder3D(dim, dim_mults, channels, z_channels, block_type=block_type, resnet_block_groups=group_norm_size, final_kernel_size=final_kernel_size)
+        self.encoder = Encoder3D(dim, dim_mults, channels, z_channels, block_type=block_type, resnet_block_groups=group_norm_size, act_type=act_type)
+        self.decoder = Decoder3D(dim, dim_mults, channels, z_channels, block_type=block_type, resnet_block_groups=group_norm_size, final_kernel_size=final_kernel_size, act_type=act_type)
 
         num_params = sum(p.numel() for p in self.parameters())
         logger.info(f'Constructed VariationAutoEncoder3D with {num_params} parameters')

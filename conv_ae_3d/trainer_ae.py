@@ -67,7 +67,9 @@ class MyAETrainer(MyTrainerBase):
         # Check the size of dataset images
         first_batch = next(iter(self.dl))
         assert len(first_batch.shape) == 5, 'Expected 4D tensor for 3D convolutional model'
-        z = self.model.encode(first_batch)
+
+        unwrapped_model = self.accelerator.unwrap_model(self.model)
+        z = unwrapped_model.encode(first_batch)
         self.write_run_info(first_batch, z)
 
     def train(self):

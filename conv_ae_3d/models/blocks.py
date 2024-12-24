@@ -73,11 +73,11 @@ class BlockType0(nn.Module):
 class BlockType1(nn.Module):
     """A fancier 3D conv + norm + activation block
     """
-    def __init__(self, dim, dim_out, groups=8):
+    def __init__(self, dim, dim_out, groups=8, act_type='silu'):
         super().__init__()
         self.proj = WeightStandardizedConv3d(dim, dim_out, 3, padding=1)
         self.norm = nn.GroupNorm(groups, dim_out)
-        self.act = nn.SiLU()
+        self.act = construct_act(act_type)
 
     def forward(self, x):
         x = self.proj(x)
@@ -154,6 +154,16 @@ def construct_act(act_type):
         return nn.ELU()
     elif act_type == 'relu':
         return nn.ReLU()
+    elif act_type == 'leaky_relu':
+        return nn.LeakyReLU()
+    elif act_type == 'gelu':
+        return nn.GELU()
+    elif act_type == 'tanh':
+        return nn.Tanh()
+    elif act_type == 'sigmoid':
+        return nn.Sigmoid()
+    elif act_type == 'identity':
+        return nn.Identity()
     else:
         raise ValueError(f"Invalid activation type: {act_type}")
 
@@ -251,10 +261,10 @@ class ResnetBlock(nn.Module):
     See: https://arxiv.org/abs/1512.03385
     """
 
-    def __init__(self, dim, dim_out, groups=8):
+    def __init__(self, dim, dim_out, groups=8, act_type='silu'):
         super().__init__()
-        self.block1 = BlockType1(dim, dim_out, groups=groups)
-        self.block2 = BlockType1(dim_out, dim_out, groups=groups)
+        self.block1 = BlockType1(dim, dim_out, groups=groups, act_type=act_type)
+        self.block2 = BlockType1(dim_out, dim_out, groups=groups, act_type=act_type)
         self.res_conv = nn.Conv3d(dim, dim_out, 1) if dim != dim_out else nn.Identity()
 
     def forward(self, x):
