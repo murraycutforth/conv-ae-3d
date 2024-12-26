@@ -153,7 +153,7 @@ class MyVAETrainer(MyTrainerBase):
                 pbar.update(1)
 
         if exists(self.results_folder):
-            self.save('final')
+            self.save(self.epoch)
             self.write_loss_history(loss_history)
 
             if not self.low_data_mode:

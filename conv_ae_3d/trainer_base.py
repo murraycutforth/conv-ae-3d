@@ -84,24 +84,23 @@ class MyTrainerBase():
         else:
             self.lr_scheduler = None
 
-        new_final_model_path = self.results_folder / 'model-final.pt'
-        if new_final_model_path.exists():
-            # Then we want to continue training from this run using the 'model-final.pt' checkpoint
+        # Find any existing model checkpoints
+        model_checkpoints = list(self.results_folder.glob('model-*.pt'))
+        if len(model_checkpoints) > 0:
+            # Then we want to continue training from the latest run
+            model_checkpoints.sort()
+            new_final_model_path = model_checkpoints[-1]
+
             assert restart_from_milestone is None
             assert restart_dir is None
             restart_dir = self.results_folder
-            restart_from_milestone = 'final'
+            restart_from_milestone = new_final_model_path.stem.split('-')[1]
 
             logger.info(f'Continuing training from final model checkpoint at {new_final_model_path}')
 
             self.load(restart_from_milestone, restart_dir)
             self.train_num_epochs += self.epoch
             self.reset_learning_rate(train_lr)
-
-            # Rename previous final model to model-step.pt
-            prev_final_path = self.results_folder / 'model-final.pt'
-            new_step_path = self.results_folder / f'model-{self.epoch}.pt'
-            prev_final_path.rename(new_step_path)
         elif restart_from_milestone is not None:
             # Load from checkpoint
             assert exists(restart_dir), f"Restart directory at {restart_dir} must exist"
