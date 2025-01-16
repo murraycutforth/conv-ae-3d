@@ -21,12 +21,28 @@ class MetricType(enum.Enum):
     REL_LINF = 'rel_Linf'
     REL_CONSERVATION_ERR = 'rel_conservation_err'
     PSD_ERR = 'psd_err'
+    SDF_HEAVISIDE_L1 = 'sdf_heaviside_L1'
+    TANH_HEAVISIDE_L1 = 'tanh_heaviside_L1'
+
+
+# TODO: the code design has failed here, since we are now writing implementation-specific metrics into this library
+# TODO: refactor s.t. metric function is passed in to trainer?
+
+def compute_sdf_heaviside_l1(gt_sdf, pred_sdf):
+    h_gt = np.heaviside(-gt_sdf, 0.0)
+    h_pred = np.heaviside(-pred_sdf, 0.0)
+    return np.linalg.norm(h_gt.flatten() - h_pred.flatten(), ord=1)
+
+
+def compute_tanh_heaviside_l1(gt_tanh, pred_tanh):
+    h_gt = np.heaviside(gt_tanh - 0.5, 1.0)
+    h_pred = np.heaviside(pred_tanh - 0.5, 1.0)
+    return np.linalg.norm(h_gt.flatten() - h_pred.flatten(), ord=1)
 
 
 def compute_psd_err(gt_patch, pred_patch):
     # TODO: compute power spectrum, and then return the average relative error between the PSD at each k
-    pass
-
+    raise NotImplementedError
 
 
 def compute_rel_conservation_err(gt_patch, pred_patch):
@@ -113,6 +129,9 @@ metric_type_to_function = {
     MetricType.REL_L2: compute_rel_l2,
     MetricType.REL_LINF: compute_rel_linf,
     MetricType.REL_CONSERVATION_ERR: compute_rel_conservation_err,
+    MetricType.PSD_ERR: compute_psd_err,
+    MetricType.SDF_HEAVISIDE_L1: compute_sdf_heaviside_l1,
+    MetricType.TANH_HEAVISIDE_L1: compute_tanh_heaviside_l1,
 }
 
 
