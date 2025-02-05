@@ -324,8 +324,8 @@ class MyTrainerBase():
             logger.info(f'Wrote power spectrum plots for {split} set')
 
             # Write out the raw preds and gts at this time step, for more in-depth analysis later on
-            np.savez_compressed(self.results_folder / f"preds_{self.epoch}.npz", preds=np.array(preds))
-            np.savez_compressed(self.results_folder / f"gts_{self.epoch}.npz", gts=np.array(gts))
+            #np.savez_compressed(self.results_folder / f"preds_{self.epoch}.npz", preds=np.array(preds))
+            #np.savez_compressed(self.results_folder / f"gts_{self.epoch}.npz", gts=np.array(gts))
 
             df = pd.DataFrame(metric_results)
             logger.info(f'Computed metrics from a total of {len(df)} samples in {split} set')
@@ -393,9 +393,9 @@ class MyTrainerBase():
         plt.close(fig)
 
         # Save raw data as well
-        if self.epoch == self.train_num_epochs:
-            np.save(outdir / f'hist_pred_intensities_{split}_{self.epoch}.npy', preds)
-            np.save(outdir / f'hist_data_{split}_{self.epoch}.npy', data)
+        #if self.epoch == self.train_num_epochs:
+        #    np.save(outdir / f'hist_pred_intensities_{split}_{self.epoch}.npy', preds)
+        #    np.save(outdir / f'hist_data_{split}_{self.epoch}.npy', data)
 
     def write_psd_plots(self, preds, data, split: str):
         """Plot the average power spectrum of the data and the predictions
@@ -441,10 +441,10 @@ class MyTrainerBase():
         plt.close(fig)
 
         # Save raw data as well
-        if self.epoch == self.train_num_epochs:
-            np.save(outdir / f'psd_preds_{split}_{self.epoch}.npy', avg_pred_psds)
-            np.save(outdir / f'psd_gt_{split}_{self.epoch}.npy', avg_data_psds)
-            np.save(outdir / f'psd_ks_{split}_{self.epoch}.npy', ks)
+        #if self.epoch == self.train_num_epochs:
+        #    np.save(outdir / f'psd_preds_{split}_{self.epoch}.npy', avg_pred_psds)
+        #    np.save(outdir / f'psd_gt_{split}_{self.epoch}.npy', avg_data_psds)
+        #    np.save(outdir / f'psd_ks_{split}_{self.epoch}.npy', ks)
 
     def plot_intermediate_val_samples(self):
         """Plot images from the validation set, and save them to disk

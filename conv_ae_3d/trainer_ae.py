@@ -146,7 +146,7 @@ class MyAETrainer(MyTrainerBase):
             self.write_loss_history(loss_history)
 
             if not self.low_data_mode:
-                #self.write_all_val_set_predictions()
+                self.write_all_val_set_predictions()
                 self.plot_final_val_samples()
 
         self.evaluate_metrics()
