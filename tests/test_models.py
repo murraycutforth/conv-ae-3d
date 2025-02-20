@@ -2,6 +2,7 @@ import unittest
 import torch
 import torch.nn as nn
 from conv_ae_3d.models.baseline_model import ConvAutoencoderBaseline
+from conv_ae_3d.models.conv_with_fc_model import ConvAutoencoderWithFC
 from conv_ae_3d.models.vae_model import VariationalAutoEncoder3D
 from conv_ae_3d.models.efficient_vae_model import EfficientVariationalAutoEncoder3D
 
@@ -115,6 +116,43 @@ class TestEfficientVariationalAutoEncoder(unittest.TestCase):
         posterior = self.model.encode(self.input_data)
         self.assertEqual(reconstructed.shape, (1, 1, 32, 32, 32))  # Check the shape of the reconstructed output
         self.assertEqual(posterior.mean.shape, (1, 1, 8, 8, 8))  # Check the shape of the posterior mean
+
+
+class TestConvAutoencoderWithFC(unittest.TestCase):
+    def setUp(self):
+        torch.manual_seed(0)
+        self.data = torch.randn(1, 1, 32, 32, 32)
+        self.model = ConvAutoencoderWithFC(
+            dim=16,
+            dim_mults=(1, 2, 2, 2),
+            channels=1,
+            z_channels=1,
+            block_type=0,
+            fc_layers=[512, 32, 16],
+            image_shape=(32, 32, 32)
+        )
+        self.device = torch.device('cpu')
+        self.model.to(self.device)
+
+    def test_encode_shape(self):
+        self.model.eval()
+        with torch.no_grad():
+            encoded = self.model.encode(self.data.to(self.device))
+        self.assertEqual(encoded.shape, (1, 16))
+
+    def test_decode_shape(self):
+        self.model.eval()
+        with torch.no_grad():
+            encoded = self.model.encode(self.data.to(self.device))
+            decoded = self.model.decode(encoded)
+        self.assertEqual(decoded.shape, self.data.shape)
+
+    def test_forward_shape(self):
+        self.model.eval()
+        with torch.no_grad():
+            output = self.model(self.data.to(self.device))
+        self.assertEqual(output.shape, self.data.shape)
+
 
 
 if __name__ == '__main__':

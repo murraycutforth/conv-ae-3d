@@ -137,7 +137,8 @@ class MyTrainerBase():
     def write_run_info(self, first_batch: torch.tensor, z: torch.tensor):
         """Write some run info to file
         """
-        self.latent_num_pixels = z.shape[1] * z.shape[2] * z.shape[3] * z.shape[4]
+        # z may be either shape (B, L) or (B, C, H, W, D)
+        self.latent_num_pixels = z.shape[1] if len(z.shape) == 2 else z.shape[1] * z.shape[2] * z.shape[3] * z.shape[4]
         physical_num_pixels = first_batch.shape[1] * first_batch.shape[2] * first_batch.shape[3] * first_batch.shape[4]
         logger.info(f'Latent space size: {self.latent_num_pixels}')
         logger.info(f'Physical space size: {physical_num_pixels}')
