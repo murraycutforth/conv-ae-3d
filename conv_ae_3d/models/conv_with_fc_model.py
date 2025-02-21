@@ -38,7 +38,8 @@ class ConvAutoencoderWithFC(ConvAutoencoderBaseline):
         for in_d, out_d in zip(fc_layers[:-1], fc_layers[1:]):
             fc_layers_list.append(nn.Linear(in_d, out_d))
             fc_layers_list.append(nn.ReLU())
-            fc_layers_list.append(ResidualBlock(n_features=out_d))
+            #fc_layers_list.append(ResidualBlock(n_features=out_d))
+        fc_layers_list.pop()  # Remove last ReLU
         self.fc_layers = nn.Sequential(*fc_layers_list)
 
         fc_decoder_layers_list = []
