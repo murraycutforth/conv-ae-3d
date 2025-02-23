@@ -23,11 +23,12 @@ class ConvAutoencoderWithFC(ConvAutoencoderBaseline):
                  dim,
                  dim_mults,
                  channels,
-                 z_channels,
                  block_type,
                  fc_layers,
                  image_shape):
-        super().__init__(dim, dim_mults, channels, z_channels, block_type)
+
+        conv_z_channels = dim * dim_mults[-1]
+        super().__init__(dim, dim_mults, channels, conv_z_channels, block_type)
 
         assert len(image_shape) == 3
         assert fc_layers is not None
@@ -46,10 +47,11 @@ class ConvAutoencoderWithFC(ConvAutoencoderBaseline):
         for in_d, out_d in list(zip(fc_layers[1:], fc_layers[:-1]))[::-1]:
             fc_decoder_layers_list.append(nn.Linear(in_d, out_d))
             fc_decoder_layers_list.append(nn.ReLU())
+        fc_decoder_layers_list.pop()
         self.fc_decoder_layers = nn.Sequential(*fc_decoder_layers_list)
 
         compressed_shape = [int(i / (2 ** (len(dim_mults) - 2))) for i in image_shape]
-        self.unflatten = nn.Unflatten(1, (z_channels, *compressed_shape))
+        self.unflatten = nn.Unflatten(1, (conv_z_channels, *compressed_shape))
 
     def encode(self, x):
         z = self.encoder(x)

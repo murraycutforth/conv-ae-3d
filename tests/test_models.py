@@ -121,15 +121,14 @@ class TestEfficientVariationalAutoEncoder(unittest.TestCase):
 class TestConvAutoencoderWithFC(unittest.TestCase):
     def setUp(self):
         torch.manual_seed(0)
-        self.data = torch.randn(1, 1, 32, 32, 32)
+        self.data = torch.randn(1, 1, 64, 64, 64)
         self.model = ConvAutoencoderWithFC(
             dim=16,
-            dim_mults=(1, 2, 2, 2),
+            dim_mults=(1, 2, 4, 8, 8, 4),
             channels=1,
-            z_channels=1,
-            block_type=0,
-            fc_layers=[512, 32, 16],
-            image_shape=(32, 32, 32)
+            block_type=1,
+            fc_layers=[4096, 512, 16],
+            image_shape=(64, 64, 64)
         )
         self.device = torch.device('cpu')
         self.model.to(self.device)
