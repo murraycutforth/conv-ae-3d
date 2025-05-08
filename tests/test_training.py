@@ -11,33 +11,7 @@ from conv_ae_3d.trainer_ae import MyAETrainer
 from conv_ae_3d.trainer_vae import MyVAETrainer
 from conv_ae_3d.models.baseline_model import ConvAutoencoderBaseline
 from conv_ae_3d.models.vae_model import VariationalAutoEncoder3D
-from conv_ae_3d.models.equivariant_vae_model import EquivariantVariationalAutoEncoder3D
 from conv_ae_3d.metrics import MetricType
-
-
-models_to_compare = [
-    partial(VariationalAutoEncoder3D, dim=16, dim_mults=(1, 2, 4, 4), channels=1, z_channels=4, block_type=1),
-    partial(EquivariantVariationalAutoEncoder3D, dim=16, dim_mults=(1, 2, 4), channels=1, z_channels=4, use_weight_std_conv=True, use_norm=True, norm_type='group', act_type='silu'),
-    partial(EquivariantVariationalAutoEncoder3D, dim=16, dim_mults=(1, 2, 4), channels=1, z_channels=4, use_weight_std_conv=True, use_norm=True, norm_type='group', act_type='relu'),
-    partial(EquivariantVariationalAutoEncoder3D, dim=16, dim_mults=(1, 2, 4), channels=1, z_channels=4, use_weight_std_conv=True, use_norm=False, act_type='silu'),
-    partial(EquivariantVariationalAutoEncoder3D, dim=16, dim_mults=(1, 2, 4), channels=1, z_channels=4, use_weight_std_conv=True, use_norm=False, act_type='relu'),
-    partial(EquivariantVariationalAutoEncoder3D, dim=16, dim_mults=(1, 2, 4), channels=1, z_channels=4, use_weight_std_conv=False, use_norm=True, norm_type='group', act_type='silu'),
-    partial(EquivariantVariationalAutoEncoder3D, dim=16, dim_mults=(1, 2, 4), channels=1, z_channels=4, use_weight_std_conv=False, use_norm=True, norm_type='group', act_type='relu'),
-    partial(EquivariantVariationalAutoEncoder3D, dim=16, dim_mults=(1, 2, 4), channels=1, z_channels=4, use_weight_std_conv=False, use_norm=False, act_type='silu'),
-    partial(EquivariantVariationalAutoEncoder3D, dim=16, dim_mults=(1, 2, 4), channels=1, z_channels=4, use_weight_std_conv=False, use_norm=False, act_type='relu'),
-]
-
-model_names = [
-    'Baseline_VAE',
-    'Equivariant_VAE_weightstd_groupnorm_silu',
-    'Equivariant_VAE_weightstd_groupnorm_relu',
-    'Equivariant_VAE_weightstd_no_norm_silu',
-    'Equivariant_VAE_weightstd_no_norm_relu',
-    'Equivariant_VAE_no_weightstd_groupnorm_silu',
-    'Equivariant_VAE_no_weightstd_groupnorm_relu',
-    'Equivariant_VAE_no_weightstd_no_norm_silu',
-    'Equivariant_VAE_no_weightstd_no_norm_relu',
-]
 
 
 class TestDataset(Dataset):
@@ -59,25 +33,6 @@ class TestTrainingWhiteNoiseDataset(unittest.TestCase):
         # Generate synthetic data, just noise
         self.train_ds = TestDataset(torch.randn(1, 1, 20, 20, 20))
 
-    def test_all_models(self):
-        for model_fn, model_name in zip(models_to_compare, model_names):
-            model = model_fn(im_shape=(20, 20, 20))
-            trainer = MyVAETrainer(
-                model=model,
-                dataset_train=self.train_ds,
-                dataset_val=self.train_ds,
-                train_batch_size=1,
-                train_lr=5e-4,
-                train_num_epochs=1000,
-                save_and_sample_every=5000,
-                results_folder=f'test_output/comparison/whitenoise/{model_name}',
-                cpu_only=True,
-                num_dl_workers=0,
-                kl_weight=1e-6,
-            )
-
-            trainer.train()
-
     def test_baseline_block_0(self):
         model = ConvAutoencoderBaseline(
             dim=16,
@@ -85,7 +40,6 @@ class TestTrainingWhiteNoiseDataset(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=0,
-            im_shape=(16, 16, 16)
         )
 
         trainer = MyAETrainer(
@@ -182,44 +136,6 @@ class TestTrainingSinesDataset(unittest.TestCase):
         ]
         self.generate_4d_grid(grid_size, spatial_frequencies)
 
-    def test_all_models_low_freq(self):
-        for model_fn, model_name in zip(models_to_compare, model_names):
-            model = model_fn(im_shape=(32, 32, 32), dim=16)
-            trainer = MyVAETrainer(
-                model=model,
-                dataset_train=self.train_ds_low_freq,
-                dataset_val=self.train_ds_low_freq,
-                train_batch_size=1,
-                train_lr=5e-4,
-                train_num_epochs=250,
-                save_and_sample_every=5000,
-                results_folder=f'test_output/comparison/sines_low_freq/{model_name}',
-                cpu_only=True,
-                num_dl_workers=0,
-                kl_weight=1e-6,
-            )
-
-            trainer.train()
-
-    def test_all_models_med_freq(self):
-        for model_fn, model_name in zip(models_to_compare, model_names):
-            model = model_fn(im_shape=(32, 32, 32), dim=16)
-            trainer = MyVAETrainer(
-                model=model,
-                dataset_train=self.train_ds_med_freq,
-                dataset_val=self.train_ds_med_freq,
-                train_batch_size=1,
-                train_lr=5e-4,
-                train_num_epochs=250,
-                save_and_sample_every=5000,
-                results_folder=f'test_output/comparison/sines_med_freq/{model_name}',
-                cpu_only=True,
-                num_dl_workers=0,
-                kl_weight=1e-6,
-            )
-
-            trainer.train()
-
     def test_baseline_block_0_low_freq(self):
         self._test_baseline_block_0('test_output_sines_low_freq_baseline_0', self.train_ds_low_freq)
 
@@ -236,7 +152,6 @@ class TestTrainingSinesDataset(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=0,
-            im_shape=(32, 32, 32)
         )
 
         trainer = MyAETrainer(
@@ -305,79 +220,6 @@ class TestTrainingSinesDataset(unittest.TestCase):
     def test_equivariant_norm_variant_1_high_freq(self):
         self._test_vae_block_1('test_output_sines_high_freq_evae_1', self.train_ds_high_freq)
 
-    def _test_equivariant_vae_norm_variant_1(self, outname, dataset):
-        model = EquivariantVariationalAutoEncoder3D(
-            dim=16,
-            dim_mults=(1, 2, 2),
-            channels=1,
-            z_channels=32,
-            im_shape=(32, 32, 32),
-            use_norm=False,
-            act_type='silu',
-        )
-
-        trainer = MyVAETrainer(
-            model=model,
-            dataset_train=dataset,
-            dataset_val=dataset,
-            train_batch_size=1,
-            train_lr=1e-4,
-            train_num_epochs=200,
-            save_and_sample_every=50,
-            results_folder=outname,
-            cpu_only=True,
-            num_dl_workers=0,
-            kl_weight=1e-6,
-            sample_posterior=False,
-        )
-
-        trainer.train()
-        results = trainer.mean_val_metrics
-        self.assertLess(results['MAE'], 0.1)
-        self.assertLess(results['MSE'], 0.01)
-
-
-    def test_equivariant_norm_variant_2_low_freq(self):
-        self._test_vae_block_1('test_output_sines_low_freq_evae_2', self.train_ds_low_freq)
-
-    def test_equivariant_norm_variant_2_med_freq(self):
-        self._test_vae_block_1('test_output_sines_med_freq_evae_2', self.train_ds_med_freq)
-
-    def test_equivariant_norm_variant_2_high_freq(self):
-        self._test_vae_block_1('test_output_sines_high_freq_evae_2', self.train_ds_high_freq)
-
-    def _test_equivariant_vae_norm_variant_2(self, outname, dataset):
-        model = EquivariantVariationalAutoEncoder3D(
-            dim=16,
-            dim_mults=(1, 2, 2),
-            channels=1,
-            z_channels=32,
-            im_shape=(32, 32, 32),
-            use_norm=False,
-            act_type='relu',
-        )
-
-        trainer = MyVAETrainer(
-            model=model,
-            dataset_train=dataset,
-            dataset_val=dataset,
-            train_batch_size=1,
-            train_lr=1e-4,
-            train_num_epochs=200,
-            save_and_sample_every=50,
-            results_folder=outname,
-            cpu_only=True,
-            num_dl_workers=0,
-            kl_weight=1e-6,
-            sample_posterior=False,
-        )
-
-        trainer.train()
-        results = trainer.mean_val_metrics
-        self.assertLess(results['MAE'], 0.1)
-        self.assertLess(results['MSE'], 0.01)
-
-
 
 class TestTrainingSquares(unittest.TestCase):
     def setUp(self):
@@ -390,27 +232,6 @@ class TestTrainingSquares(unittest.TestCase):
             data[i, 0, x:x+5, y:y+5, z:z+5] = 1
         self.train_ds = TestDataset(data)
 
-    def test_all_models(self):
-        for model_fn, model_name in zip(models_to_compare, model_names):
-            model = model_fn(im_shape=(16, 16, 16), dim=24)
-            trainer = MyVAETrainer(
-                model=model,
-                dataset_train=self.train_ds,
-                dataset_val=self.train_ds,
-                train_batch_size=self.b,
-                train_lr=1e-4,
-                train_num_epochs=500,
-                save_and_sample_every=5000,
-                results_folder=f'test_output/comparison/squares/{model_name}',
-                cpu_only=True,
-                num_dl_workers=0,
-                kl_weight=1e-6,
-            )
-
-            trainer.train()
-
-            break # TODO
-
     def test_baseline_block_0(self):
         model = ConvAutoencoderBaseline(
             dim=24,
@@ -418,7 +239,6 @@ class TestTrainingSquares(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=0,
-            im_shape=(16, 16, 16)
         )
 
         trainer = MyVAETrainer(
@@ -446,7 +266,6 @@ class TestTrainingSquares(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=1,
-            im_shape=(32, 32, 32)
         )
 
         trainer = MyVAETrainer(
@@ -488,68 +307,6 @@ class TestTrainingSquares(unittest.TestCase):
             train_num_epochs=100,
             save_and_sample_every=25,
             results_folder='test_output_squares_vae_0',
-            cpu_only=True,
-            num_dl_workers=0,
-            kl_weight=1e-6,
-            sample_posterior=False,
-        )
-
-        trainer.train()
-        results = trainer.mean_val_metrics
-        self.assertLess(results['MAE'], 0.1)
-        self.assertLess(results['MSE'], 0.01)
-
-    def test_equivariant_vae_no_norm_silu(self):
-        model = EquivariantVariationalAutoEncoder3D(
-            dim=24,
-            dim_mults=(1, 2),
-            channels=1,
-            z_channels=32,
-            im_shape=(16, 16, 16),
-            use_norm=False,
-            act_type='silu'
-        )
-
-        trainer = MyVAETrainer(
-            model=model,
-            dataset_train=self.train_ds,
-            dataset_val=self.train_ds,
-            train_batch_size=self.b,
-            train_lr=1e-3,
-            train_num_epochs=200,
-            save_and_sample_every=50,
-            results_folder='test_output_squares_equivariant_vae',
-            cpu_only=True,
-            num_dl_workers=0,
-            kl_weight=1e-6,
-            sample_posterior=False,
-        )
-
-        trainer.train()
-        results = trainer.mean_val_metrics
-        self.assertLess(results['MAE'], 0.1)
-        self.assertLess(results['MSE'], 0.01)
-
-    def test_equivariant_vae_no_norm_relu(self):
-        model = EquivariantVariationalAutoEncoder3D(
-            dim=24,
-            dim_mults=(1, 2),
-            channels=1,
-            z_channels=32,
-            im_shape=(16, 16, 16),
-            use_norm=False,
-            act_type='relu'
-        )
-
-        trainer = MyVAETrainer(
-            model=model,
-            dataset_train=self.train_ds,
-            dataset_val=self.train_ds,
-            train_batch_size=self.b,
-            train_lr=1e-3,
-            train_num_epochs=200,
-            save_and_sample_every=50,
-            results_folder='test_output_squares_equivariant_vae',
             cpu_only=True,
             num_dl_workers=0,
             kl_weight=1e-6,
@@ -615,25 +372,6 @@ class TestTrainingRealData(unittest.TestCase):
 
         data = torch.tensor(data).unsqueeze(0).unsqueeze(0).float()
         self.train_ds = TestDataset(data)
-
-    def test_all_models(self):
-        for model_fn, model_name in zip(models_to_compare, model_names):
-            model = model_fn(im_shape=(32, 32, 32), dim=32)
-            trainer = MyVAETrainer(
-                model=model,
-                dataset_train=self.train_ds,
-                dataset_val=self.train_ds,
-                train_batch_size=1,
-                train_lr=5e-4,
-                train_num_epochs=500,
-                save_and_sample_every=1000,
-                results_folder=f'test_output/comparison/realdata/{model_name}',
-                cpu_only=True,
-                num_dl_workers=0,
-                kl_weight=1e-6,
-            )
-
-            trainer.train()
 
     def test_baseline_block_0(self):
         model = ConvAutoencoderBaseline(

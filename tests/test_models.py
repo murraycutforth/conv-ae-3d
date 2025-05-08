@@ -4,7 +4,6 @@ import torch.nn as nn
 from conv_ae_3d.models.baseline_model import ConvAutoencoderBaseline
 from conv_ae_3d.models.conv_with_fc_model import ConvAutoencoderWithFC
 from conv_ae_3d.models.vae_model import VariationalAutoEncoder3D
-from conv_ae_3d.models.efficient_vae_model import EfficientVariationalAutoEncoder3D
 
 
 class TestConvAutoencoderBaseline(unittest.TestCase):
@@ -86,36 +85,6 @@ class TestVariationalAutoEncoder3D_1(unittest.TestCase):
         posterior = self.model.encode(self.input_data)
         self.assertEqual(reconstructed.shape, (1, 1, 32, 32, 32))  # Check the shape of the reconstructed output
         self.assertEqual(posterior.mean.shape, (1, 1, 4, 4, 4))  # Check the shape of the posterior mean
-
-class TestEfficientVariationalAutoEncoder(unittest.TestCase):
-    def setUp(self):
-        self.model = EfficientVariationalAutoEncoder3D(
-            dim=8,
-            dim_mults=(1, 1, 1, 1),
-            channels=1,
-            z_channels=1,
-            block_type=1,
-        )
-        self.input_data = torch.randn(1, 1, 32, 32, 32)  # Batch size of 1, 1 channel, 32x32x32 volume
-
-    def test_initialization(self):
-        self.assertIsInstance(self.model, EfficientVariationalAutoEncoder3D)
-
-    def test_encode(self):
-        posterior = self.model.encode(self.input_data)
-        self.assertEqual(posterior.mean.shape, (1, 1, 8, 8, 8))  # Check the shape of the mean
-        self.assertEqual(posterior.logvar.shape, (1, 1, 8, 8, 8))  # Check the shape of the logvar
-
-    def test_decode(self):
-        z = torch.randn(1, 1, 8, 8, 8)  # Latent variable with the expected shape
-        decoded = self.model.decode(z)
-        self.assertEqual(decoded.shape, (1, 1, 32, 32, 32))  # Check the shape of the decoded output
-
-    def test_forward(self):
-        reconstructed = self.model(self.input_data)
-        posterior = self.model.encode(self.input_data)
-        self.assertEqual(reconstructed.shape, (1, 1, 32, 32, 32))  # Check the shape of the reconstructed output
-        self.assertEqual(posterior.mean.shape, (1, 1, 8, 8, 8))  # Check the shape of the posterior mean
 
 
 class TestConvAutoencoderWithFC(unittest.TestCase):

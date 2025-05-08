@@ -3,6 +3,7 @@ import logging
 import torch
 import os
 from conv_ae_3d.trainer_vae import MyVAETrainer
+from conv_ae_3d.trainer_ae import MyAETrainer
 from conv_ae_3d.models.baseline_model import ConvAutoencoderBaseline
 
 
@@ -22,10 +23,9 @@ class TestCheckpointing(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=0,
-            im_shape=(32, 32, 32)
         )
 
-        trainer = MyVAETrainer(
+        trainer = MyAETrainer(
             model=model,
             dataset_train=self.train_ds,
             dataset_val=self.train_ds,
@@ -56,7 +56,6 @@ class TestCheckpointing(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=0,
-            im_shape=(32, 32, 32)
         )
 
         with self.assertRaises(RuntimeError):
@@ -82,7 +81,6 @@ class TestCheckpointing(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=0,
-            im_shape=(32, 32, 32)
         )
 
         trainer = MyVAETrainer(
@@ -111,7 +109,6 @@ class TestCheckpointing(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=0,
-            im_shape=(32, 32, 32)
         )
 
         trainer = MyVAETrainer(
@@ -138,7 +135,6 @@ class TestCheckpointing(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=0,
-            im_shape=(32, 32, 32)
         )
 
         reloaded_trainer = MyVAETrainer(
@@ -169,7 +165,6 @@ class TestCheckpointing(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=1,
-            im_shape=(32, 32, 32)
         )
 
         trainer = MyVAETrainer(
@@ -202,7 +197,6 @@ class TestCheckpointing(unittest.TestCase):
             channels=1,
             z_channels=4,
             block_type=0,
-            im_shape=(32, 32, 32)
         )
 
         trainer = MyVAETrainer(
