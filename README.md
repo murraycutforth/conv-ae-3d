@@ -34,18 +34,18 @@ from conv_ae_3d.models.vae_model import VariationalAutoEncoder3D
 from conv_ae_3d.trainer_vae import MyVAETrainer
 
 model = VariationalAutoEncoder3D(
-dim=16,
-dim_mults=(1, 2, 4, 8),
-channels=1,
-z_channels=1,
-block_type=1
+    dim=16,
+    dim_mults=(1, 2, 4, 8),
+    channels=1,
+    z_channels=1,
+    block_type=1
 )
 
 trainer = MyVAETrainer(
-model=model,
-dataset_train=train_dataset,
-dataset_val=val_dataset,
-kl_weight=1e-6,
-sample_posterior=False
+    model=model,
+    dataset_train=train_dataset,
+    dataset_val=val_dataset,
+    kl_weight=1e-6,
+    sample_posterior=False
 )
 ```
