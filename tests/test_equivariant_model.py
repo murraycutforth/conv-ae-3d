@@ -2,6 +2,63 @@ import unittest
 import torch
 import numpy as np
 from conv_ae_3d.models.equivariant_vae_model import EquivariantEncoder3D, EquivariantVariationalAutoEncoder3D
+from conv_ae_3d.models.simple_equivariant_ae import SimpleEquivariantAENoDownsamples
+
+
+class TestSimpleEquivariantAENoDownsamples(unittest.TestCase):
+    def setUp(self):
+        self.input_data = torch.randn(1, 1, 100, 100, 100)
+
+    def test_encoder_equivariance(self):
+        ae = SimpleEquivariantAENoDownsamples(z_channels=8)
+
+        in_size = 32
+
+        for x_shift in [0, 1, 2, 4, 8]:
+            for y_shift in [0, 1, 2, 4, 8]:
+                for z_shift in [0, 1, 2, 4, 8]:
+                    x0 = self.input_data[:, :, :in_size, :in_size, :in_size]
+                    x_shifted = self.input_data[:, :, x_shift:x_shift+in_size, y_shift:y_shift+in_size, z_shift:z_shift+in_size]
+
+                    z0 = ae.encoder(x0)
+                    z_shifted = ae.encoder(x_shifted)
+
+                    self.assertEqual(z0.shape, (1, 8, 30, 30, 30))
+                    self.assertEqual(z_shifted.shape, (1, 8, 30, 30, 30))
+
+                    # Check that overlapping parts of z0 and z_shifted are the same
+                    z_0_shifted = z0[:, :, x_shift:, y_shift:, z_shift:]
+                    z_shifted_overlapping = z_shifted[:, :, :in_size-2-x_shift, :in_size-2-y_shift, :in_size-2-z_shift]
+
+                    self.assertEqual(z_0_shifted.shape, z_shifted_overlapping.shape)
+                    self.assertTrue(torch.allclose(z_0_shifted, z_shifted_overlapping, atol=1e-6))
+
+    def test_forward_equivariance(self):
+        ae = SimpleEquivariantAENoDownsamples(z_channels=8)
+        in_size = 32
+        out_size = 32
+
+        for x_shift in [0, 1, 2, 4, 8]:
+            for y_shift in [0, 1, 2, 4, 8]:
+                for z_shift in [0, 1, 2, 4, 8]:
+                    x0 = self.input_data[:, :, :in_size, :in_size, :in_size]
+                    x_shifted = self.input_data[:, :, x_shift:x_shift+in_size, y_shift:y_shift+in_size, z_shift:z_shift+in_size]
+
+                    x0_recon = ae(x0)
+                    x_shifted_recon = ae(x_shifted)
+
+                    self.assertEqual(x0_recon.shape, (1, 1, out_size, out_size, out_size))
+                    self.assertEqual(x_shifted_recon.shape, (1, 1, out_size, out_size, out_size))
+
+                    # Check that overlapping parts of x0_recon and x_shifted_recon are the same
+                    x_0_shifted = x0_recon[:, :, x_shift:, y_shift:, z_shift:]
+                    x_shifted_overlapping = x_shifted_recon[:, :, :out_size-x_shift, :out_size-y_shift, :out_size-z_shift]
+
+                    self.assertEqual(x_0_shifted.shape, x_shifted_overlapping.shape)
+                    self.assertTrue(torch.allclose(x_0_shifted, x_shifted_overlapping, atol=1e-6))
+
+
+
 
 
 class TestEquivariantVariationalAutoEncoder3D(unittest.TestCase):
